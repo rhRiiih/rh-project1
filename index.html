@@ -727,8 +727,14 @@
     let currentView = "detail";
     let modalTxType = "deposit";
 
+    let storageOK = true;
+
+    function readStorage() {
+      try { return localStorage.getItem(STORAGE_KEY); } catch (e) { storageOK = false; return null; }
+    }
+
     function init() {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const stored = readStorage();
       if (stored) {
         try { records = JSON.parse(stored); } catch (e) { records = [...SEED_DATA]; }
       } else {
@@ -740,7 +746,7 @@
     }
 
     function saveStorage() {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(records)); } catch (e) { storageOK = false; }
     }
 
     function formatWon(num) {
@@ -922,7 +928,8 @@
             ${isDep ? '+' : '-'}${formatWon(tx.amount)}
           </td>
           <td style="text-align: right;" class="money-bal">${formatWon(tx.runningBalance)}</td>
-          <td style="text-align: center;">
+          <td style="text-align: center; white-space: nowrap;">
+            <button class="del-btn" onclick="editTx('${tx.id}')" title="수정">✏️</button>
             <button class="del-btn" onclick="deleteTx('${tx.id}')" title="삭제">🗑️</button>
           </td>
         `;
@@ -997,7 +1004,25 @@
       document.getElementById("txModal").classList.add("open");
     }
 
+    function editTx(id) {
+      const tx = records.find(r => r.id === id);
+      if (!tx) return;
+
+      document.getElementById("modalTitle").innerText = "모임통장 내역 수정";
+      document.getElementById("editTxId").value = tx.id;
+      document.getElementById("txDate").value = tx.date;
+      document.getElementById("txAmount").value = tx.amount;
+      document.getElementById("txContent").value = tx.content || "";
+      document.getElementById("txMemo").value = tx.memo || "";
+
+      setTxType(tx.type === "withdraw" ? "withdraw" : "deposit");
+      document.getElementById("txWho").value = tx.who || "공통";
+      document.getElementById("txModal").classList.add("open");
+    }
+
     function closeAddModal() {
+      document.getElementById("editTxId").value = "";
+      document.getElementById("modalTitle").innerText = "모임통장 거래 입력";
       document.getElementById("txModal").classList.remove("open");
     }
 
@@ -1030,17 +1055,31 @@
         return;
       }
 
-      const newTx = {
-        id: "tx_" + Date.now(),
-        date,
-        type: modalTxType,
-        who,
-        content,
-        amount,
-        memo
-      };
+      const editId = document.getElementById("editTxId").value;
 
-      records.push(newTx);
+      if (editId) {
+        // 기존 내역 수정
+        const target = records.find(r => r.id === editId);
+        if (target) {
+          target.date = date;
+          target.type = modalTxType;
+          target.who = who;
+          target.content = content;
+          target.amount = amount;
+          target.memo = memo;
+        }
+      } else {
+        records.push({
+          id: "tx_" + Date.now(),
+          date,
+          type: modalTxType,
+          who,
+          content,
+          amount,
+          memo
+        });
+      }
+
       saveStorage();
 
       // Switch selectedYear to the date's year
