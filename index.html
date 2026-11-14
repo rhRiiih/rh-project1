@@ -471,7 +471,7 @@
       <div class="brand">
         <div class="brand-icon">🤝</div>
         <div>
-          <span class="brand-title">우리 모임통장</span>
+          <span class="brand-title" id="brandTitle" onclick="renameLedger()" title="제목 바꾸기" style="cursor: pointer;">우리 모임통장</span>
           <span class="brand-badge">2인 전용 결산 장부</span>
         </div>
       </div>
@@ -689,6 +689,7 @@
 
   <script>
     const STORAGE_KEY = "together_ledger_records_v1";
+    const TITLE_KEY = "together_ledger_title_v1";
 
     // 2015년부터의 현실적인 모임통장 샘플 시드 데이터
     const SEED_DATA = [
@@ -733,7 +734,26 @@
       try { return localStorage.getItem(STORAGE_KEY); } catch (e) { storageOK = false; return null; }
     }
 
+    function applyTitle() {
+      let t = "우리 모임통장";
+      try { const saved = localStorage.getItem(TITLE_KEY); if (saved) t = saved; } catch (e) {}
+      const el = document.getElementById("brandTitle");
+      if (el) el.innerText = t;
+      document.title = t + " — 연간 결산 장부";
+    }
+
+    function renameLedger() {
+      const el = document.getElementById("brandTitle");
+      const next = prompt("모임통장 이름을 입력해 주세요.", el ? el.innerText : "우리 모임통장");
+      if (next === null) return;
+      const name = next.trim();
+      if (!name) return;
+      try { localStorage.setItem(TITLE_KEY, name); } catch (e) {}
+      applyTitle();
+    }
+
     function init() {
+      applyTitle();
       const stored = readStorage();
       if (stored) {
         try { records = JSON.parse(stored); } catch (e) { records = [...SEED_DATA]; }
