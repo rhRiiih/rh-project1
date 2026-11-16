@@ -627,11 +627,14 @@
       </div>
 
       <div class="form-group">
-        <label class="form-label">입금자 / 지출 주체</label>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label class="form-label" style="margin:0;">입금자 / 지출 주체</label>
+          <button type="button" onclick="renameMembers()" style="background:none; border:none; color:var(--accent-blue); font-size:0.75rem; font-weight:600; cursor:pointer; padding:0;">✏️ 구성원 이름 수정</button>
+        </div>
         <select id="txWho" class="form-select" onchange="onWhoSelect()">
           <option value="공통">👥 둘이 함께 / 모임 지출</option>
-          <option value="나">👤 나 (리하)</option>
-          <option value="친구">👤 친구</option>
+          <option value="나" id="optMe">👤 나 (리하)</option>
+          <option value="친구" id="optFriend">👤 친구</option>
           <option value="통장 이자">🏦 통장 결산 이자</option>
           <option value="__custom__">✏️ 직접 입력…</option>
         </select>
@@ -754,8 +757,56 @@
       applyTitle();
     }
 
+    const MEMBERS_KEY = "our_ledger_members_v1";
+
+    function getMembers() {
+      let m = { me: "나", friend: "친구" };
+      try {
+        const saved = localStorage.getItem(MEMBERS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && typeof parsed === "object") {
+            if (parsed.me) m.me = parsed.me;
+            if (parsed.friend) m.friend = parsed.friend;
+          }
+        }
+      } catch (e) {}
+      return m;
+    }
+
+    function applyMembers() {
+      const m = getMembers();
+      const optMe = document.getElementById("optMe");
+      const optFriend = document.getElementById("optFriend");
+      if (optMe) optMe.innerText = m.me === "나" ? "👤 나 (리하)" : "👤 " + m.me;
+      if (optFriend) optFriend.innerText = "👤 " + m.friend;
+    }
+
+    function formatWhoDisplay(who) {
+      const m = getMembers();
+      if (who === "친구") return m.friend;
+      if (who === "나") return m.me;
+      return who || "-";
+    }
+
+    function renameMembers() {
+      const m = getMembers();
+      const nextFriend = prompt("친구 이름을 입력해 주세요.", m.friend);
+      if (nextFriend !== null && nextFriend.trim()) {
+        m.friend = nextFriend.trim().slice(0, 20);
+      }
+      const nextMe = prompt("내 이름을 입력해 주세요. (그대로 두려면 취소)", m.me);
+      if (nextMe !== null && nextMe.trim()) {
+        m.me = nextMe.trim().slice(0, 20);
+      }
+      try { localStorage.setItem(MEMBERS_KEY, JSON.stringify(m)); } catch (e) {}
+      applyMembers();
+      renderDetailView();
+    }
+
     function init() {
       applyTitle();
+      applyMembers();
       const stored = readStorage();
       if (stored) {
         try { records = JSON.parse(stored); } catch (e) { records = [...SEED_DATA]; }
@@ -944,7 +995,7 @@
         tr.innerHTML = `
           <td style="font-weight: 600;">${tx.date}</td>
           <td><span class="type-badge ${isDep ? 'badge-dep' : 'badge-with'}">${isDep ? '입금' : '출금'}</span></td>
-          <td style="color: var(--text-secondary);">${escapeHtml(tx.who || '-')}</td>
+          <td style="color: var(--text-secondary);">${escapeHtml(formatWhoDisplay(tx.who))}</td>
           <td>${escapeHtml(tx.content)} ${tx.memo ? `<span style="font-size:0.75rem; color:var(--text-muted);">(${escapeHtml(tx.memo)})</span>` : ''}</td>
           <td style="text-align: right;" class="${isDep ? 'money-dep' : 'money-with'}">
             ${isDep ? '+' : '-'}${formatWon(tx.amount)}
