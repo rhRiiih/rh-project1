@@ -607,7 +607,7 @@
 
       <div class="type-toggle">
         <button type="button" class="type-btn active dep" id="btnTypeDep" onclick="setTxType('deposit')">💰 입금 (회비 저축)</button>
-        <button type="button" class="type-btn" id="btnTypeWith" onclick="setTxType('withdraw')">💸 출금 (만남 지출)</button>
+        <button type="button" class="type-btn with" id="btnTypeWith" onclick="setTxType('withdraw')"><span class="type-emoji">💸</span> 출금 (만남 지출)</button>
       </div>
 
       <div class="form-group">
@@ -628,12 +628,14 @@
 
       <div class="form-group">
         <label class="form-label">입금자 / 지출 주체</label>
-        <select id="txWho" class="form-select">
+        <select id="txWho" class="form-select" onchange="onWhoSelect()">
           <option value="공통">👥 둘이 함께 / 모임 지출</option>
           <option value="나">👤 나 (리하)</option>
           <option value="친구">👤 친구</option>
           <option value="통장 이자">🏦 통장 결산 이자</option>
+          <option value="__custom__">✏️ 직접 입력…</option>
         </select>
+        <input type="text" id="txWhoCustom" class="form-input" placeholder="예: 친구2, 홍길동 등" style="display:none;" maxlength="20">
       </div>
 
       <div class="form-group">
@@ -995,6 +997,26 @@
     }
 
     // Modal Control
+    function onWhoSelect() {
+      const sel = document.getElementById("txWho");
+      const customInput = document.getElementById("txWhoCustom");
+      if (sel.value === "__custom__") {
+        customInput.style.display = "block";
+        customInput.focus();
+      } else {
+        customInput.style.display = "none";
+      }
+    }
+
+    function getWhoValue() {
+      const sel = document.getElementById("txWho").value;
+      if (sel === "__custom__") {
+        const v = document.getElementById("txWhoCustom").value.trim();
+        return v || "공통";
+      }
+      return sel;
+    }
+
     function setTxType(type) {
       modalTxType = type;
       document.getElementById("btnTypeDep").classList.toggle("active", type === "deposit");
@@ -1014,6 +1036,8 @@
       document.getElementById("txAmount").value = "";
       document.getElementById("txContent").value = "";
       document.getElementById("txMemo").value = "";
+      document.getElementById("txWhoCustom").value = "";
+      document.getElementById("txWhoCustom").style.display = "none";
 
       // Default to selectedYear or current date
       const today = new Date().toISOString().split("T")[0];
@@ -1036,7 +1060,18 @@
       document.getElementById("txMemo").value = tx.memo || "";
 
       setTxType(tx.type === "withdraw" ? "withdraw" : "deposit");
-      document.getElementById("txWho").value = tx.who || "공통";
+      const whoSel = document.getElementById("txWho");
+      const whoVal = tx.who || "공통";
+      const hasOption = Array.from(whoSel.options).some(o => o.value === whoVal);
+      if (hasOption) {
+        whoSel.value = whoVal;
+        document.getElementById("txWhoCustom").style.display = "none";
+      } else {
+        whoSel.value = "__custom__";
+        const c = document.getElementById("txWhoCustom");
+        c.style.display = "block";
+        c.value = whoVal;
+      }
       document.getElementById("txModal").classList.add("open");
     }
 
@@ -1058,7 +1093,7 @@
     function saveTransaction() {
       const amount = parseInt(document.getElementById("txAmount").value, 10);
       const date = document.getElementById("txDate").value;
-      const who = document.getElementById("txWho").value;
+      const who = getWhoValue();
       const content = document.getElementById("txContent").value.trim();
       const memo = document.getElementById("txMemo").value.trim();
 
