@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#dc5744">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="PDF 이미지">
+<title>PDF ↔ 이미지</title>
+<style>
+  :root {
+    --accent: #d1493a;
+    --accent-ink: #ffffff;
+    --accent-soft: #fff0ed;
+    --accent-line: #ffd3ca;
+    --accent-shadow: rgba(209, 73, 58, .26);
+    --hdr: linear-gradient(160deg, #dc5744 0%, #e87b5f 55%, #f3a184 100%);
+    --hdr-shadow: rgba(220, 87, 68, .24);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --ink: #16181d;
+    --muted: #6b7280;
+    --line: #e7e9ee;
+    --accent: #4f46e5;
+    --accent-ink: #ffffff;
+    --accent-soft: #eef1ff;
+    --accent-line: #d9dcff;
+    --ok: #0f9863;
+    --danger: #d94848;
+    --radius: 16px;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+      "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 44px; }
+
+  header {
+    background: var(--hdr, linear-gradient(160deg, #5b52ec 0%, #7c6cf5 55%, #9d8cff 100%));
+    color: #fff;
+    padding: calc(22px + env(safe-area-inset-top)) 20px 26px;
+    border-radius: 0 0 26px 26px;
+    box-shadow: 0 8px 24px var(--hdr-shadow, rgba(79, 70, 229, .22));
+  }
+  header .inner { max-width: 560px; margin: 0 auto; display: flex; align-items: flex-start; gap: 12px; }
+  header .h-txt { flex: 1; min-width: 0; }
+  header h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.4px; font-weight: 800; }
+  header p { margin: 0; font-size: 13.5px; opacity: .9; line-height: 1.45; }
+  header .back {
+    flex: none; text-decoration: none; color: #fff; font-size: 12.5px; font-weight: 700;
+    background: rgba(255, 255, 255, .18); border-radius: 999px; padding: 7px 12px; margin-top: 2px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 14px;
+    box-shadow: 0 1px 2px rgba(22, 24, 29, .04), 0 6px 18px rgba(22, 24, 29, .05);
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 0 0 10px;
+    letter-spacing: .2px;
+  }
+  .card h2 .sub { font-weight: 600; color: #9aa0ab; margin-left: 4px; }
+
+  .priv {
+    display: flex; align-items: center; gap: 8px;
+    background: #edf7f2; color: #0b6b48;
+    border: 1px solid #c9ebdb; border-radius: 12px;
+    padding: 10px 12px; font-size: 12.5px; font-weight: 700; line-height: 1.45;
+    margin-top: 14px;
+  }
+  .priv span.ic { font-size: 14px; }
+
+  .tabs { display: flex; gap: 6px; background: #eceef4; border-radius: 14px; padding: 5px; margin-top: 14px; }
+  .tab {
+    flex: 1; border: 0; background: transparent; font-family: inherit;
+    font-size: 14.5px; font-weight: 700; color: var(--muted);
+    padding: 11px 6px; border-radius: 10px; transition: background .15s ease, color .15s ease;
+  }
+  .tab.active { background: #fff; color: var(--accent); box-shadow: 0 1px 4px rgba(22, 24, 29, .12); }
+
+  .panel { display: none; }
+  .panel.show { display: block; }
+
+  .field { margin-top: 14px; }
+  .field:first-child { margin-top: 0; }
+  .label {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 7px;
+  }
+  .label .val { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  input[type=text], input[type=password], input[type=url], textarea, select {
+    width: 100%; border: 1px solid var(--line); background: #fbfbfd;
+    border-radius: 12px; padding: 12px; font-family: inherit; font-size: 15px;
+    line-height: 1.45; color: var(--ink); outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  textarea { resize: vertical; min-height: 48px; }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-line); background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  select {
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  input[type=color] {
+    -webkit-appearance: none; appearance: none; border: 1px solid var(--line);
+    border-radius: 10px; width: 46px; height: 40px; padding: 3px; background: #fff;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type=color]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+
+  button { font-family: inherit; }
+  .btn {
+    font-size: 15px; font-weight: 700; border: 0; border-radius: 12px;
+    padding: 13px 14px; cursor: pointer; transition: transform .06s ease, background .15s ease, opacity .15s ease;
+    touch-action: manipulation; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn:active { transform: scale(.985); }
+  .btn:disabled { opacity: .45; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 14px var(--accent-shadow, rgba(79, 70, 229, .28)); }
+  .btn-primary.done { background: var(--ok); box-shadow: 0 4px 14px rgba(15, 152, 99, .26); }
+  .btn-ghost { background: #f1f2f6; color: var(--ink); }
+  .btn-ghost:active { background: #e8eaf0; }
+  .btn-soft { background: var(--accent-soft); color: var(--accent); }
+  .btn-danger { background: #fdeeee; color: var(--danger); }
+  .btn-small { font-size: 13px; padding: 9px 11px; border-radius: 10px; }
+  .btn-block { width: 100%; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .row > * { flex: 1; }
+  .row.tight { gap: 6px; margin-top: 0; }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button {
+    flex: 1 1 0; min-width: 62px; background: #f1f2f6; color: #4b5162;
+    border: 1px solid transparent; border-radius: 11px; padding: 11px 8px;
+    font-size: 13.5px; font-weight: 700; transition: background .15s ease, color .15s ease;
+  }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+
+  .drop {
+    display: block; border: 1.5px dashed #cfd3e0; border-radius: 14px;
+    padding: 24px 16px; text-align: center; background: #fbfbfd;
+    color: var(--muted); font-size: 13.5px; line-height: 1.5; cursor: pointer;
+  }
+  .drop:active { background: #f6f7fb; }
+  .drop .big { display: block; font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }
+  .drop .sub { display: block; margin-top: 4px; font-size: 12px; color: #9aa0ab; }
+  input[type=file] { display: none; }
+
+  .hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; }
+  .hint b { color: #4b5162; }
+  .warn {
+    display: none; margin-top: 10px; background: #fffaef; border: 1px solid #f5e3b8;
+    color: #7a5b12; border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.5;
+  }
+  .warn.show { display: block; }
+  .err {
+    display: none; margin-top: 12px; background: #fdeeee; border: 1px solid #f6cfcf;
+    color: #a83232; border-radius: 12px; padding: 12px; font-size: 13.5px; line-height: 1.5;
+  }
+  .err.show { display: block; }
+
+  .progress { height: 6px; background: #eceef4; border-radius: 999px; overflow: hidden; margin-top: 12px; display: none; }
+  .progress.show { display: block; }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s ease; }
+
+  .thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .thumb {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .thumb.single { grid-column: 1 / -1; }
+  .thumb .ph { background: #f6f7fa; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .thumb .ph img { display: block; width: 100%; height: auto; }
+  .thumb .cap { padding: 8px 9px 9px; }
+  .thumb .nm {
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb .sz { font-size: 11.5px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .thumb .sz .ok { color: var(--ok); font-weight: 800; }
+  .thumb .ops { display: flex; gap: 4px; margin-top: 7px; }
+  .thumb .ops button {
+    flex: 1; border: 0; background: #f1f2f6; color: #4b5162;
+    font-size: 12px; font-weight: 700; border-radius: 8px; padding: 7px 2px;
+  }
+  .thumb .ops button.save { background: var(--accent-soft); color: var(--accent); }
+  .thumb .ops button.del { background: #fdeeee; color: var(--danger); flex: none; width: 30px; }
+  .badge {
+    position: absolute; top: 6px; left: 6px; font-size: 11px; font-weight: 800;
+    background: rgba(22, 24, 29, .72); color: #fff; border-radius: 999px; padding: 2px 8px;
+  }
+
+  .stat { display: flex; gap: 8px; margin-top: 12px; }
+  .stat > div {
+    flex: 1; background: #fafbfd; border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 11px;
+  }
+  .stat .k { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+  .stat .v { font-size: 16px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .v.ok { color: var(--ok); }
+
+  .empty-hint { font-size: 13.5px; color: var(--muted); padding: 8px 2px 2px; line-height: 1.55; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px); background: #16181d; color: #fff;
+    font-size: 14px; font-weight: 600; padding: 12px 20px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    z-index: 50; max-width: calc(100% - 40px); text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 20px; line-height: 1.7; }
+  footer a { color: #6b7280; text-decoration: none; border-bottom: 1px solid #dcdfe6; }
+  .fox { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 22px; }
+  .pg-wrap { position: relative; }
+  .pg-wrap .ph { height: 132px; }
+  .pg-wrap .ph img { width: 100%; height: 132px; object-fit: contain; }
+  .file-chip {
+    display: flex; align-items: center; gap: 9px; margin-top: 12px;
+    background: var(--accent-soft); border-radius: 12px; padding: 10px 12px;
+  }
+  .file-chip .ic { font-size: 18px; }
+  .file-chip .t { flex: 1; min-width: 0; }
+  .file-chip .t .n { font-size: 13.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-chip .t .m { font-size: 11.5px; color: #8b6a63; margin-top: 1px; }
+  .ord { display: flex; flex-direction: column; gap: 3px; }
+  .ord button { width: 26px; height: 22px; border: 0; background: #f1f2f6; color: #4b5162; border-radius: 6px; font-size: 12px; line-height: 1; }
+  .ord button:disabled { opacity: .35; }
+  .thumb .top { display: flex; gap: 6px; align-items: stretch; }
+  .thumb .top .ph { flex: 1; min-width: 0; height: 96px; }
+  .thumb .top .ph img { width: 100%; height: 96px; object-fit: cover; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="h-txt">
+      <h1>🗂️ PDF ↔ 이미지</h1>
+      <p>PDF 페이지를 사진으로 꺼내고, 사진 여러 장을 PDF 한 개로 묶어요.</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="priv"><span class="ic">🔒</span><div>외부 서버 전송 없이 기기 안에서만 처리됩니다</div></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" type="button" id="tabP2I" role="tab">PDF → 이미지</button>
+    <button class="tab" type="button" id="tabI2P" role="tab">이미지 → PDF</button>
+  </div>
+
+  <!-- ============ PDF → 이미지 ============ -->
+  <section class="panel show" id="panelP2I">
+    <div class="card">
+      <h2>PDF 올리기</h2>
+      <label class="drop" for="pdfInput">
+        <span class="big">📄 PDF 파일 선택</span>
+        탭해서 파일 앱에서 골라 주세요
+        <span class="sub">여러 쪽 PDF도 됩니다 · 비밀번호 걸린 PDF는 열 수 없어요</span>
+      </label>
+      <input type="file" id="pdfInput" accept="application/pdf,.pdf">
+      <div class="file-chip" id="pdfChip" style="display:none">
+        <span class="ic">📄</span>
+        <div class="t">
+          <div class="n" id="pdfName">—</div>
+          <div class="m" id="pdfMeta">—</div>
+        </div>
+        <button class="btn btn-ghost btn-small" type="button" id="pdfReset">바꾸기</button>
+      </div>
+      <div class="err" id="pdfErr"></div>
+      <div class="progress" id="pdfProg"><i></i></div>
+    </div>
+
+    <div class="card" id="pageOptions" style="display:none">
+      <h2>저장 설정</h2>
+      <div class="field">
+        <div class="label">형식</div>
+        <div class="seg" id="fmtSeg">
+          <button type="button" data-v="jpg" class="on">JPG <span style="font-weight:600">· 용량 작게</span></button>
+          <button type="button" data-v="png">PNG <span style="font-weight:600">· 글자 선명</span></button>
+        </div>
+      </div>
+      <div class="field">
+        <div class="label">해상도</div>
+        <div class="seg" id="scaleSeg">
+          <button type="button" data-v="1">보통 · 1배</button>
+          <button type="button" data-v="2" class="on">선명 · 2배</button>
+          <button type="button" data-v="3">인쇄 · 3배</button>
+        </div>
+      </div>
+      <div class="hint">2배면 A4 한 장이 약 1240×1754px로 나와요. 사진처럼 크게 볼 때는 2배, 인쇄는 3배를 골라 주세요.</div>
+    </div>
+
+    <div class="card" id="pagesCard" style="display:none">
+      <h2>페이지 <span class="sub" id="pgCount"></span></h2>
+      <div class="thumbs pg-wrap" id="pages"></div>
+      <div class="progress" id="saveProg"><i></i></div>
+      <div class="row">
+        <button class="btn btn-primary" type="button" id="saveAllZip">전체 저장 (ZIP)</button>
+        <button class="btn btn-ghost" type="button" id="saveAllEach">전체 개별 저장</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 이미지 → PDF ============ -->
+  <section class="panel" id="panelI2P">
+    <div class="card">
+      <h2>사진 올리기</h2>
+      <label class="drop" for="imgInput">
+        <span class="big">🖼️ 사진 여러 장 선택</span>
+        탭해서 앨범에서 골라 주세요
+        <span class="sub">고른 순서대로 PDF에 담겨요 · 순서는 아래에서 바꿀 수 있어요</span>
+      </label>
+      <input type="file" id="imgInput" accept="image/*" multiple>
+      <div class="err" id="imgErr"></div>
+      <div class="thumbs" id="imgList"></div>
+      <div class="empty-hint" id="imgEmpty">아직 고른 사진이 없어요.</div>
+    </div>
+
+    <div class="card" id="pdfOptions" style="display:none">
+      <h2>용지 설정</h2>
+      <div class="field">
+        <div class="label">용지</div>
+        <div class="seg" id="paperSeg">
+          <button type="button" data-v="a4" class="on">A4 맞춤</button>
+          <button type="button" data-v="orig">사진 비율 그대로</button>
+        </div>
+      </div>
+      <div class="field" id="marginField">
+        <div class="label">여백</div>
+        <div class="seg" id="marginSeg">
+          <button type="button" data-v="0">없음</button>
+          <button type="button" data-v="10" class="on">10mm</button>
+          <button type="button" data-v="20">20mm</button>
+        </div>
+      </div>
+      <div class="hint" id="paperHint">A4 한 장에 사진 한 장씩, 잘리지 않게 가운데로 맞춰 담아요.</div>
+      <div class="progress" id="makeProg"><i></i></div>
+      <button class="btn btn-primary btn-block" type="button" id="makePdf" style="margin-top:14px">PDF 만들기</button>
+    </div>
+  </section>
+
+  <footer>
+    모든 처리는 이 브라우저 안에서 끝나고, 올린 파일은 어디에도 저장되지 않아요.<br>
+    사파리 공유 → 홈 화면에 추가 하면 앱처럼 바로 열 수 있어요.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', init);
+
+var PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+var MAX_SIDE = 4096;
+
+function $(id) { return document.getElementById(id); }
+
+var toastTimer = null;
+function toast(msg) {
+  var el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1900);
+}
+
+function fmtSize(bytes) {
+  if (!bytes && bytes !== 0) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+function saveBlob(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 6000);
+}
+
+function stamp() {
+  var d = new Date();
+  function p(n) { return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+
+function baseName(name) {
+  return String(name || 'file').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 40);
+}
+
+function setProg(el, pct) {
+  var bar = el.querySelector('i');
+  el.classList.add('show');
+  bar.style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (pct >= 100) setTimeout(function () { el.classList.remove('show'); bar.style.width = '0'; }, 700);
+}
+
+function segInit(id, cb) {
+  var box = $(id);
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(box.querySelectorAll('button'), function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    if (cb) cb(b.getAttribute('data-v'));
+  });
+}
+function segVal(id) {
+  var b = $(id).querySelector('button.on');
+  return b ? b.getAttribute('data-v') : '';
+}
+
+/* =========================================================
+   탭
+   ========================================================= */
+function init() {
+  $('tabP2I').addEventListener('click', function () { switchTab('p2i'); });
+  $('tabI2P').addEventListener('click', function () { switchTab('i2p'); });
+
+  if (window.pdfjsLib) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
+    initPdfToImage();
+  } else {
+    $('pdfErr').textContent = 'PDF 엔진을 불러오지 못했어요. 인터넷 연결을 확인하고 화면을 새로 고쳐 주세요.';
+    $('pdfErr').classList.add('show');
+  }
+  initImageToPdf();
+}
+
+function switchTab(which) {
+  var p2i = which === 'p2i';
+  $('tabP2I').classList.toggle('active', p2i);
+  $('tabI2P').classList.toggle('active', !p2i);
+  $('panelP2I').classList.toggle('show', p2i);
+  $('panelI2P').classList.toggle('show', !p2i);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* =========================================================
+   PDF → 이미지
+   ========================================================= */
+var pdfState = { doc: null, name: '', pages: [], file: null, busy: false };
+
+function initPdfToImage() {
+  segInit('fmtSeg');
+  segInit('scaleSeg');
+
+  $('pdfInput').addEventListener('change', function (e) {
+    var f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (f) openPdf(f);
+  });
+
+  $('pdfReset').addEventListener('click', function () {
+    if (pdfState.doc) { try { pdfState.doc.destroy(); } catch (err) {} }
+    pdfState = { doc: null, name: '', pages: [], file: null, busy: false };
+    $('pdfChip').style.display = 'none';
+    $('pageOptions').style.display = 'none';
+    $('pagesCard').style.display = 'none';
+    $('pdfErr').classList.remove('show');
+    $('pages').innerHTML = '';
+  });
+
+  $('saveAllZip').addEventListener('click', function () { saveAll(true); });
+  $('saveAllEach').addEventListener('click', function () { saveAll(false); });
+}
+
+function openPdf(file) {
+  var err = $('pdfErr');
+  err.classList.remove('show');
+  if (pdfState.doc) { try { pdfState.doc.destroy(); } catch (e) {} }
+  pdfState = { doc: null, name: file.name, pages: [], file: file, busy: false };
+  $('pages').innerHTML = '';
+  $('pagesCard').style.display = 'none';
+  $('pageOptions').style.display = 'block';
+  $('pdfChip').style.display = 'flex';
+  $('pdfName').textContent = file.name;
+  $('pdfMeta').textContent = fmtSize(file.size) + ' · 읽는 중…';
+  setProg($('pdfProg'), 12);
+
+  file.arrayBuffer().then(function (buf) {
+    return pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
+  }).then(function (doc) {
+    pdfState.doc = doc;
+    $('pdfMeta').textContent = fmtSize(file.size) + ' · ' + doc.numPages + '쪽';
+    setProg($('pdfProg'), 35);
+    return buildThumbs(doc);
+  }).then(function () {
+    setProg($('pdfProg'), 100);
+    $('pagesCard').style.display = 'block';
+    toast(pdfState.pages.length + '쪽을 불러왔어요');
+  }).catch(function (ex) {
+    setProg($('pdfProg'), 100);
+    var msg = String((ex && ex.name) || '');
+    if (msg === 'PasswordException') {
+      err.textContent = '비밀번호가 걸린 PDF예요. 암호를 푼 파일로 다시 시도해 주세요.';
+    } else if (msg === 'InvalidPDFException') {
+      err.textContent = 'PDF 파일을 읽지 못했어요. 파일이 손상되지 않았는지 확인해 주세요.';
+    } else {
+      err.textContent = 'PDF를 여는 중 문제가 생겼어요. 화면을 새로 고친 뒤 다시 시도해 주세요.';
+    }
+    err.classList.add('show');
+    $('pdfMeta').textContent = fmtSize(file.size) + ' · 열지 못함';
+  });
+}
+
+function renderPage(doc, num, mult, format) {
+  return doc.getPage(num).then(function (page) {
+    var base = page.getViewport({ scale: 1 });
+    var s = mult;
+    var longest = Math.max(base.width, base.height);
+    if (longest * s > MAX_SIDE) s = MAX_SIDE / longest;
+    var vp = page.getViewport({ scale: s });
+    var c = document.createElement('canvas');
+    c.width = Math.max(1, Math.ceil(vp.width));
+    c.height = Math.max(1, Math.ceil(vp.height));
+    var ctx = c.getContext('2d');
+    if (format === 'jpg') { ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height); }
+    return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () { return c; });
+  });
+}
+
+function buildThumbs(doc) {
+  pdfState.pages = [];
+  var total = doc.numPages;
+  var chain = Promise.resolve();
+  for (var n = 1; n <= total; n++) {
+    (function (num) {
+      chain = chain.then(function () {
+        return doc.getPage(num).then(function (page) {
+          var base = page.getViewport({ scale: 1 });
+          var s = 300 / Math.max(base.width, base.height);
+          var vp = page.getViewport({ scale: s });
+          var c = document.createElement('canvas');
+          c.width = Math.max(1, Math.ceil(vp.width));
+          c.height = Math.max(1, Math.ceil(vp.height));
+          var ctx = c.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, c.width, c.height);
+          return page.render({ canvasContext: ctx, viewport: vp }).promise.then(function () {
+            return c.toDataURL('image/jpeg', 0.8);
+          });
+        }).then(function (url) {
+          pdfState.pages.push({ n: num, url: url });
+          addPageTile(num, url);
+          setProg($('pdfProg'), 35 + (num / total) * 60);
+        });
+      });
+    })(n);
+  }
+  return chain;
+}
+
+function addPageTile(num, url) {
+  var d = document.createElement('div');
+  d.className = 'thumb pg-wrap';
+  d.innerHTML =
+    '<div class="ph"><img alt="' + num + '쪽 미리보기" src="' + url + '"></div>' +
+    '<div class="cap"><div class="nm">' + num + '쪽</div>' +
+    '<div class="ops"><button type="button" class="save">저장</button></div></div>';
+  d.querySelector('button.save').addEventListener('click', function () { savePage(num, this); });
+  $('pages').appendChild(d);
+  $('pgCount').textContent = pdfState.pages.length + '쪽';
+}
+
+function savePage(num, btn) {
+  if (!pdfState.doc || pdfState.busy) return;
+  var fmt = segVal('fmtSeg');
+  var mult = Number(segVal('scaleSeg'));
+  pdfState.busy = true;
+  btn.textContent = '…';
+  renderPage(pdfState.doc, num, mult, fmt).then(function (canvas) {
+    var mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+    return new Promise(function (res) { canvas.toBlob(res, mime, 0.92); });
+  }).then(function (blob) {
+    saveBlob(blob, baseName(pdfState.name) + '-p' + num + '.' + fmt);
+    toast(num + '쪽 저장했어요');
+  }).catch(function () {
+    toast('저장에 실패했어요. 다시 시도해 주세요.');
+  }).then(function () {
+    pdfState.busy = false;
+    btn.textContent = '저장';
+  });
+}
+
+function saveAll(useZip) {
+  if (!pdfState.doc || pdfState.busy) return;
+  var pages = pdfState.pages;
+  if (!pages.length) return;
+  var fmt = segVal('fmtSeg');
+  var mult = Number(segVal('scaleSeg'));
+  var mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+  var zip = useZip && window.JSZip ? new JSZip() : null;
+  if (useZip && !zip) toast('압축 도구를 못 불러와 개별 저장으로 진행해요');
+
+  pdfState.busy = true;
+  var idx = 0;
+  var seq = Promise.resolve();
+
+  pages.forEach(function (p) {
+    seq = seq.then(function () {
+      return renderPage(pdfState.doc, p.n, mult, fmt).then(function (canvas) {
+        return new Promise(function (res) { canvas.toBlob(res, mime, 0.92); });
+      }).then(function (blob) {
+        var name = baseName(pdfState.name) + '-p' + p.n + '.' + fmt;
+        if (zip) zip.file(name, blob);
+        else saveBlob(blob, name);
+        idx++;
+        setProg($('saveProg'), (idx / pages.length) * 100);
+      });
+    });
+  });
+
+  seq.then(function () {
+    if (zip) {
+      return zip.generateAsync({ type: 'blob' }).then(function (blob) {
+        saveBlob(blob, baseName(pdfState.name) + '-이미지-' + stamp() + '.zip');
+      });
+    }
+  }).then(function () {
+    toast(pages.length + '쪽 저장을 시작했어요');
+  }).catch(function () {
+    toast('저장 중 문제가 생겼어요. 한 장씩 저장해 주세요.');
+  }).then(function () {
+    pdfState.busy = false;
+  });
+}
+
+/* =========================================================
+   이미지 → PDF
+   ========================================================= */
+var imgState = [];
+var imgSeq = 0;
+
+function initImageToPdf() {
+  segInit('paperSeg', function (v) {
+    $('marginField').style.display = v === 'a4' ? 'block' : 'none';
+    $('paperHint').textContent = v === 'a4'
+      ? 'A4 한 장에 사진 한 장씩, 잘리지 않게 가운데로 맞춰 담아요.'
+      : '사진 비율 그대로 한 장씩 담아요. 여백이 없어요.';
+  });
+  segInit('marginSeg');
+
+  $('imgInput').addEventListener('change', function (e) {
+    var files = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = '';
+    if (files.length) addImages(files);
+  });
+
+  $('makePdf').addEventListener('click', makePdf);
+}
+
+function addImages(files) {
+  var err = $('imgErr');
+  err.classList.remove('show');
+  var chain = Promise.resolve();
+  var failed = 0;
+
+  files.forEach(function (f) {
+    chain = chain.then(function () {
+      return loadImage(f).then(function (img) {
+        imgState.push({
+          id: ++imgSeq,
+          name: f.name || '사진',
+          img: img,
+          w: img.width,
+          h: img.height,
+          size: f.size
+        });
+        renderImgList();
+      }).catch(function () { failed++; });
+    });
+  });
+
+  chain.then(function () {
+    $('pdfOptions').style.display = imgState.length ? 'block' : 'none';
+    if (failed) {
+      err.textContent = failed + '장은 열지 못했어요(HEIC 등 지원하지 않는 형식일 수 있어요).';
+      err.classList.add('show');
+    }
+    if (imgState.length) toast(imgState.length + '장을 담았어요');
+  });
+}
+
+function loadImage(file) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth || img.width;
+      var h = img.naturalHeight || img.height;
+      if (!w || !h) { URL.revokeObjectURL(url); reject(new Error('empty')); return; }
+      img.__url = url;
+      img.__w = w;
+      img.__h = h;
+      resolve(img);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.src = url;
+  });
+}
+
+function renderImgList() {
+  var list = $('imgList');
+  list.innerHTML = '';
+  $('imgEmpty').style.display = imgState.length ? 'none' : 'block';
+
+  imgState.forEach(function (it, i) {
+    var d = document.createElement('div');
+    d.className = 'thumb';
+    d.innerHTML =
+      '<div class="top">' +
+        '<div class="ph"><img alt="" src="' + it.img.__url + '"></div>' +
+        '<div class="ord">' +
+          '<button type="button" class="up"' + (i === 0 ? ' disabled' : '') + ' aria-label="위로">▲</button>' +
+          '<button type="button" class="down"' + (i === imgState.length - 1 ? ' disabled' : '') + ' aria-label="아래로">▼</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cap">' +
+        '<div class="nm">' + (i + 1) + '. ' + escapeHtml(it.name) + '</div>' +
+        '<div class="sz">' + it.w + '×' + it.h + ' · ' + fmtSize(it.size) + '</div>' +
+        '<div class="ops"><button type="button" class="del">삭제</button></div>' +
+      '</div>';
+
+    d.querySelector('.up').addEventListener('click', function () { moveImg(i, -1); });
+    d.querySelector('.down').addEventListener('click', function () { moveImg(i, 1); });
+    d.querySelector('.del').addEventListener('click', function () { removeImg(i); });
+    list.appendChild(d);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function moveImg(i, dir) {
+  var j = i + dir;
+  if (j < 0 || j >= imgState.length) return;
+  var t = imgState[i];
+  imgState[i] = imgState[j];
+  imgState[j] = t;
+  renderImgList();
+}
+
+function removeImg(i) {
+  imgState.splice(i, 1);
+  renderImgList();
+  if (!imgState.length) $('pdfOptions').style.display = 'none';
+}
+
+function imageToJpegBlob(img) {
+  var w = img.__w, h = img.__h;
+  var max = 3000;
+  var s = Math.min(1, max / Math.max(w, h));
+  var cw = Math.max(1, Math.round(w * s));
+  var ch = Math.max(1, Math.round(h * s));
+  var c = document.createElement('canvas');
+  c.width = cw;
+  c.height = ch;
+  var ctx = c.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, cw, ch);
+  ctx.drawImage(img, 0, 0, cw, ch);
+  return new Promise(function (res, rej) {
+    c.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, 'image/jpeg', 0.9);
+  });
+}
+
+function makePdf() {
+  if (!imgState.length) return;
+  if (!window.PDFLib) {
+    var err = $('imgErr');
+    err.textContent = 'PDF 만드는 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 화면을 새로 고쳐 주세요.';
+    err.classList.add('show');
+    return;
+  }
+  var mode = segVal('paperSeg');
+  var margin = Number(segVal('marginSeg')) * 2.83465;
+  var A4 = [595.28, 841.89];
+  var btn = $('makePdf');
+  btn.disabled = true;
+  $('imgErr').classList.remove('show');
+
+  var PDFDocument = PDFLib.PDFDocument;
+  var doc;
+  var done = 0;
+
+  PDFDocument.create().then(function (d) {
+    doc = d;
+    var chain = Promise.resolve();
+    imgState.forEach(function (it) {
+      chain = chain.then(function () {
+        return imageToJpegBlob(it.img).then(function (blob) {
+          return blob.arrayBuffer();
+        }).then(function (buf) {
+          return doc.embedJpg(buf);
+        }).then(function (emb) {
+          if (mode === 'a4') {
+            var page = doc.addPage(A4);
+            var boxW = A4[0] - margin * 2;
+            var boxH = A4[1] - margin * 2;
+            var s = Math.min(boxW / emb.width, boxH / emb.height);
+            var w = emb.width * s;
+            var h = emb.height * s;
+            page.drawImage(emb, {
+              x: (A4[0] - w) / 2,
+              y: (A4[1] - h) / 2,
+              width: w,
+              height: h
+            });
+          } else {
+            var long = 842;
+            var pw = emb.width >= emb.height ? long : long * emb.width / emb.height;
+            var ph = emb.width >= emb.height ? long * emb.height / emb.width : long;
+            var page2 = doc.addPage([pw, ph]);
+            page2.drawImage(emb, { x: 0, y: 0, width: pw, height: ph });
+          }
+          done++;
+          setProg($('makeProg'), (done / imgState.length) * 88);
+        });
+      });
+    });
+    return chain;
+  }).then(function () {
+    return doc.save();
+  }).then(function (bytes) {
+    setProg($('makeProg'), 100);
+    saveBlob(new Blob([bytes], { type: 'application/pdf' }), '사진모음-' + stamp() + '.pdf');
+    toast(imgState.length + '장을 PDF로 만들었어요');
+  }).catch(function (ex) {
+    setProg($('makeProg'), 100);
+    var err = $('imgErr');
+    err.textContent = 'PDF를 만드는 중 문제가 생겼어요. 사진 수를 줄이거나 화면을 새로 고쳐 다시 시도해 주세요.';
+    err.classList.add('show');
+  }).then(function () {
+    btn.disabled = false;
+  });
+}
+</script>
+</body>
+</html>

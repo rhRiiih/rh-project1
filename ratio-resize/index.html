@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#c92a76">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="비율 리사이즈">
+<title>비율 리사이즈 (스레드·인스타)</title>
+<style>
+  :root {
+    --accent: #c92a76;
+    --accent-ink: #ffffff;
+    --accent-soft: #fdeef6;
+    --accent-line: #f8cfe4;
+    --accent-shadow: rgba(201, 42, 118, .24);
+    --hdr: linear-gradient(160deg, #c92a76 0%, #dc4d8f 55%, #f184b6 100%);
+    --hdr-shadow: rgba(201, 42, 118, .22);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --ink: #16181d;
+    --muted: #6b7280;
+    --line: #e7e9ee;
+    --accent: #4f46e5;
+    --accent-ink: #ffffff;
+    --accent-soft: #eef1ff;
+    --accent-line: #d9dcff;
+    --ok: #0f9863;
+    --danger: #d94848;
+    --radius: 16px;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+      "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 44px; }
+
+  header {
+    background: var(--hdr, linear-gradient(160deg, #5b52ec 0%, #7c6cf5 55%, #9d8cff 100%));
+    color: #fff;
+    padding: calc(22px + env(safe-area-inset-top)) 20px 26px;
+    border-radius: 0 0 26px 26px;
+    box-shadow: 0 8px 24px var(--hdr-shadow, rgba(79, 70, 229, .22));
+  }
+  header .inner { max-width: 560px; margin: 0 auto; display: flex; align-items: flex-start; gap: 12px; }
+  header .h-txt { flex: 1; min-width: 0; }
+  header h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.4px; font-weight: 800; }
+  header p { margin: 0; font-size: 13.5px; opacity: .9; line-height: 1.45; }
+  header .back {
+    flex: none; text-decoration: none; color: #fff; font-size: 12.5px; font-weight: 700;
+    background: rgba(255, 255, 255, .18); border-radius: 999px; padding: 7px 12px; margin-top: 2px;
+  }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 14px;
+    box-shadow: 0 1px 2px rgba(22, 24, 29, .04), 0 6px 18px rgba(22, 24, 29, .05);
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 0 0 10px;
+    letter-spacing: .2px;
+  }
+  .card h2 .sub { font-weight: 600; color: #9aa0ab; margin-left: 4px; }
+
+  .priv {
+    display: flex; align-items: center; gap: 8px;
+    background: #edf7f2; color: #0b6b48;
+    border: 1px solid #c9ebdb; border-radius: 12px;
+    padding: 10px 12px; font-size: 12.5px; font-weight: 700; line-height: 1.45;
+    margin-top: 14px;
+  }
+  .priv span.ic { font-size: 14px; }
+
+  .tabs { display: flex; gap: 6px; background: #eceef4; border-radius: 14px; padding: 5px; margin-top: 14px; }
+  .tab {
+    flex: 1; border: 0; background: transparent; font-family: inherit;
+    font-size: 14.5px; font-weight: 700; color: var(--muted);
+    padding: 11px 6px; border-radius: 10px; transition: background .15s ease, color .15s ease;
+  }
+  .tab.active { background: #fff; color: var(--accent); box-shadow: 0 1px 4px rgba(22, 24, 29, .12); }
+
+  .panel { display: none; }
+  .panel.show { display: block; }
+
+  .field { margin-top: 14px; }
+  .field:first-child { margin-top: 0; }
+  .label {
+    display: flex; align-items: center; justify-content: space-between; gap: 8px;
+    font-size: 12.5px; font-weight: 700; color: var(--muted); margin-bottom: 7px;
+  }
+  .label .val { color: var(--accent); font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  input[type=text], input[type=password], input[type=url], textarea, select {
+    width: 100%; border: 1px solid var(--line); background: #fbfbfd;
+    border-radius: 12px; padding: 12px; font-family: inherit; font-size: 15px;
+    line-height: 1.45; color: var(--ink); outline: none;
+    -webkit-appearance: none; appearance: none;
+  }
+  textarea { resize: vertical; min-height: 48px; }
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-line); background: #fff;
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+  select {
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+  }
+  input[type=color] {
+    -webkit-appearance: none; appearance: none; border: 1px solid var(--line);
+    border-radius: 10px; width: 46px; height: 40px; padding: 3px; background: #fff;
+  }
+  input[type=color]::-webkit-color-swatch-wrapper { padding: 0; }
+  input[type=color]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+
+  button { font-family: inherit; }
+  .btn {
+    font-size: 15px; font-weight: 700; border: 0; border-radius: 12px;
+    padding: 13px 14px; cursor: pointer; transition: transform .06s ease, background .15s ease, opacity .15s ease;
+    touch-action: manipulation; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .btn:active { transform: scale(.985); }
+  .btn:disabled { opacity: .45; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 14px var(--accent-shadow, rgba(79, 70, 229, .28)); }
+  .btn-primary.done { background: var(--ok); box-shadow: 0 4px 14px rgba(15, 152, 99, .26); }
+  .btn-ghost { background: #f1f2f6; color: var(--ink); }
+  .btn-ghost:active { background: #e8eaf0; }
+  .btn-soft { background: var(--accent-soft); color: var(--accent); }
+  .btn-danger { background: #fdeeee; color: var(--danger); }
+  .btn-small { font-size: 13px; padding: 9px 11px; border-radius: 10px; }
+  .btn-block { width: 100%; }
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .row > * { flex: 1; }
+  .row.tight { gap: 6px; margin-top: 0; }
+
+  .seg { display: flex; flex-wrap: wrap; gap: 6px; }
+  .seg button {
+    flex: 1 1 0; min-width: 62px; background: #f1f2f6; color: #4b5162;
+    border: 1px solid transparent; border-radius: 11px; padding: 11px 8px;
+    font-size: 13.5px; font-weight: 700; transition: background .15s ease, color .15s ease;
+  }
+  .seg button.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line); }
+
+  .drop {
+    display: block; border: 1.5px dashed #cfd3e0; border-radius: 14px;
+    padding: 24px 16px; text-align: center; background: #fbfbfd;
+    color: var(--muted); font-size: 13.5px; line-height: 1.5; cursor: pointer;
+  }
+  .drop:active { background: #f6f7fb; }
+  .drop .big { display: block; font-size: 15px; font-weight: 800; color: var(--ink); margin-bottom: 3px; }
+  .drop .sub { display: block; margin-top: 4px; font-size: 12px; color: #9aa0ab; }
+  input[type=file] { display: none; }
+
+  .hint { font-size: 12.5px; color: var(--muted); line-height: 1.55; margin-top: 8px; }
+  .hint b { color: #4b5162; }
+  .warn {
+    display: none; margin-top: 10px; background: #fffaef; border: 1px solid #f5e3b8;
+    color: #7a5b12; border-radius: 10px; padding: 9px 11px; font-size: 12.5px; line-height: 1.5;
+  }
+  .warn.show { display: block; }
+  .err {
+    display: none; margin-top: 12px; background: #fdeeee; border: 1px solid #f6cfcf;
+    color: #a83232; border-radius: 12px; padding: 12px; font-size: 13.5px; line-height: 1.5;
+  }
+  .err.show { display: block; }
+
+  .progress { height: 6px; background: #eceef4; border-radius: 999px; overflow: hidden; margin-top: 12px; display: none; }
+  .progress.show { display: block; }
+  .progress > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s ease; }
+
+  .thumbs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .thumb {
+    background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    overflow: hidden; display: flex; flex-direction: column;
+  }
+  .thumb.single { grid-column: 1 / -1; }
+  .thumb .ph { background: #f6f7fa; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+  .thumb .ph img { display: block; width: 100%; height: auto; }
+  .thumb .cap { padding: 8px 9px 9px; }
+  .thumb .nm {
+    font-size: 12px; font-weight: 700; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .thumb .sz { font-size: 11.5px; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .thumb .sz .ok { color: var(--ok); font-weight: 800; }
+  .thumb .ops { display: flex; gap: 4px; margin-top: 7px; }
+  .thumb .ops button {
+    flex: 1; border: 0; background: #f1f2f6; color: #4b5162;
+    font-size: 12px; font-weight: 700; border-radius: 8px; padding: 7px 2px;
+  }
+  .thumb .ops button.save { background: var(--accent-soft); color: var(--accent); }
+  .thumb .ops button.del { background: #fdeeee; color: var(--danger); flex: none; width: 30px; }
+  .badge {
+    position: absolute; top: 6px; left: 6px; font-size: 11px; font-weight: 800;
+    background: rgba(22, 24, 29, .72); color: #fff; border-radius: 999px; padding: 2px 8px;
+  }
+
+  .stat { display: flex; gap: 8px; margin-top: 12px; }
+  .stat > div {
+    flex: 1; background: #fafbfd; border: 1px solid var(--line);
+    border-radius: 12px; padding: 10px 11px;
+  }
+  .stat .k { font-size: 11.5px; color: var(--muted); font-weight: 700; }
+  .stat .v { font-size: 16px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .stat .v.ok { color: var(--ok); }
+
+  .empty-hint { font-size: 13.5px; color: var(--muted); padding: 8px 2px 2px; line-height: 1.55; }
+
+  .toast {
+    position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px); background: #16181d; color: #fff;
+    font-size: 14px; font-weight: 600; padding: 12px 20px; border-radius: 999px;
+    opacity: 0; pointer-events: none; transition: opacity .18s ease, transform .18s ease;
+    z-index: 50; max-width: calc(100% - 40px); text-align: center;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 20px; line-height: 1.7; }
+  footer a { color: #6b7280; text-decoration: none; border-bottom: 1px solid #dcdfe6; }
+  .fox { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 22px; }
+  input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 30px; background: transparent; margin: 0; }
+  input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: #e3e5ee; }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: var(--accent);
+    margin-top: -10px; box-shadow: 0 2px 8px rgba(201, 42, 118, .4); border: 3px solid #fff;
+  }
+  .qrow { display: flex; align-items: center; gap: 10px; }
+  .qrow .num {
+    flex: none; width: 56px; text-align: center; font-weight: 800; font-size: 14px;
+    color: var(--accent); background: var(--accent-soft); border-radius: 9px; padding: 6px 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .qrow .rng { flex: 1; }
+  .thumb .ph { height: 150px; }
+  .thumb .ph img { width: 100%; height: 150px; object-fit: contain; background: #fff; }
+  .ratio-btns button { font-variant-numeric: tabular-nums; }
+  .color-cell { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .color-cell .k { font-size: 12.5px; font-weight: 700; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <div class="h-txt">
+      <h1>📐 비율 리사이즈</h1>
+      <p>스레드·인스타에 맞게 비율을 바꿔도 사진은 잘리지 않아요.</p>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="priv"><span class="ic">🔒</span><div>외부 서버 전송 없이 기기 안에서만 처리됩니다</div></div>
+
+  <div class="card">
+    <h2>사진 올리기</h2>
+    <label class="drop" for="imgInput">
+      <span class="big">🖼️ 사진 여러 장 선택</span>
+      탭해서 앨범에서 골라 주세요
+      <span class="sub">비율이 달라도 잘리지 않고, 남는 자리는 여백으로 채워요</span>
+    </label>
+    <input type="file" id="imgInput" accept="image/*" multiple>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div class="card" id="optCard" style="display:none">
+    <h2>비율</h2>
+    <div class="seg ratio-btns" id="ratioSeg">
+      <button type="button" data-v="1:1" class="on">1:1</button>
+      <button type="button" data-v="4:5">4:5</button>
+      <button type="button" data-v="16:9">16:9</button>
+      <button type="button" data-v="9:16">9:16</button>
+      <button type="button" data-v="3:4">3:4</button>
+    </div>
+    <div class="hint" id="ratioHint">1:1 — 인스타 피드 정사각형</div>
+
+    <div class="field">
+      <div class="label">빈 공간 채우기</div>
+      <div class="seg" id="fillSeg">
+        <button type="button" data-v="white" class="on">흰 여백</button>
+        <button type="button" data-v="black">검정 여백</button>
+        <button type="button" data-v="blur">블러 배경</button>
+        <button type="button" data-v="color">직접 색</button>
+      </div>
+      <div class="color-cell" id="colorCell" style="display:none">
+        <input type="color" id="bgColor" value="#f2f2f2">
+        <span class="k">배경색</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="label">사진 크기 <span class="val" id="sizeNote">여백 없이 꽉 채움</span></div>
+      <div class="qrow">
+        <div class="rng"><input type="range" id="scale" min="50" max="100" step="5" value="100"></div>
+        <div class="num" id="scaleVal">100%</div>
+      </div>
+      <div class="hint">낮출수록 사진이 작아지고 여백이 넓어져요. 블러 배경과 함께 쓰면 카드뉴스 느낌이 나요.</div>
+    </div>
+
+    <div class="field">
+      <div class="label">저장 크기</div>
+      <div class="seg" id="resSeg">
+        <button type="button" data-v="1080" class="on">1080</button>
+        <button type="button" data-v="1440">1440</button>
+        <button type="button" data-v="2160">2160</button>
+      </div>
+      <div class="hint">가로 폭 기준이에요. 세로 비율(4:5·9:16)이면 세로가 더 길어져요.</div>
+    </div>
+
+    <div class="field">
+      <div class="label">형식</div>
+      <div class="seg" id="fmtSeg">
+        <button type="button" data-v="image/jpeg" class="on">JPG</button>
+        <button type="button" data-v="image/png">PNG</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <h2>결과 <span class="sub" id="cnt"></span></h2>
+    <div class="thumbs" id="list"></div>
+    <div class="progress" id="prog"><i></i></div>
+    <div class="row">
+      <button class="btn btn-primary" type="button" id="saveAll">전체 저장 (ZIP)</button>
+    </div>
+  </div>
+
+  <footer>
+    사진은 잘리지 않아요. 비율이 안 맞는 부분만 여백·블러로 채워요.<br>
+    모든 처리는 이 브라우저 안에서 끝납니다.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+window.addEventListener('DOMContentLoaded', init);
+
+var RATIOS = {
+  '1:1': [1, 1], '4:5': [4, 5], '16:9': [16, 9], '9:16': [9, 16], '3:4': [3, 4]
+};
+var HINTS = {
+  '1:1': '1:1 — 인스타 피드 정사각형',
+  '4:5': '4:5 — 인스타 피드 세로 (가장 크게 보여요)',
+  '16:9': '16:9 — 유튜브 썸네일·가로형',
+  '9:16': '9:16 — 릴스·스레드 세로 영상 비율',
+  '3:4': '3:4 — 인스타 세로 사진'
+};
+
+var items = [];
+var seq = 0;
+var busy = false;
+var timer = null;
+
+function $(id) { return document.getElementById(id); }
+
+var toastTimer = null;
+function toast(msg) {
+  var el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { el.classList.remove('show'); }, 1900);
+}
+
+function stamp() {
+  var d = new Date();
+  function p(n) { return (n < 10 ? '0' : '') + n; }
+  return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()) + '-' + p(d.getHours()) + p(d.getMinutes());
+}
+
+function baseName(name) {
+  return String(name || 'photo').replace(/\.[^.]+$/, '').replace(/[\\/:*?"<>|]+/g, '_').slice(0, 44) || 'photo';
+}
+
+function saveBlob(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 6000);
+}
+
+function setProg(pct) {
+  var el = $('prog');
+  el.classList.add('show');
+  el.querySelector('i').style.width = Math.max(0, Math.min(100, pct)) + '%';
+  if (pct >= 100) setTimeout(function () { el.classList.remove('show'); el.querySelector('i').style.width = '0'; }, 700);
+}
+
+function segInit(id, cb) {
+  var box = $(id);
+  box.addEventListener('click', function (e) {
+    var b = e.target.closest('button');
+    if (!b) return;
+    Array.prototype.forEach.call(box.querySelectorAll('button'), function (x) { x.classList.remove('on'); });
+    b.classList.add('on');
+    if (cb) cb(b.getAttribute('data-v'));
+  });
+}
+function segVal(id) {
+  var b = $(id).querySelector('button.on');
+  return b ? b.getAttribute('data-v') : '';
+}
+
+function init() {
+  $('sizeNote').textContent = '여백 없이 꽉 채움';
+  segInit('ratioSeg', function (v) {
+    $('ratioHint').textContent = HINTS[v] || '';
+    schedule();
+  });
+  segInit('fillSeg', function (v) {
+    $('colorCell').style.display = v === 'color' ? 'flex' : 'none';
+    if (v === 'blur' && Number($('scale').value) === 100) {
+      $('scale').value = 100;
+      $('scaleVal').textContent = '100%';
+      $('sizeNote').textContent = '여백 없이 꽉 채움';
+    }
+    schedule();
+  });
+  segInit('resSeg', schedule);
+  segInit('fmtSeg', schedule);
+
+  $('scale').addEventListener('input', function () {
+    $('scaleVal').textContent = this.value + '%';
+    $('sizeNote').textContent = Number(this.value) >= 100 ? '여백 없이 꽉 채움' : '여백 ' + Math.round((100 - Number(this.value)) / 2) + '%씩';
+    schedule();
+  });
+  $('bgColor').addEventListener('input', schedule);
+
+  $('imgInput').addEventListener('change', function (e) {
+    var files = Array.prototype.slice.call(e.target.files || []);
+    e.target.value = '';
+    if (files.length) addFiles(files);
+  });
+
+  $('saveAll').addEventListener('click', saveAll);
+}
+
+function addFiles(files) {
+  $('err').classList.remove('show');
+  var chain = Promise.resolve();
+  var bad = 0;
+  files.forEach(function (f) {
+    chain = chain.then(function () {
+      return loadImage(f).then(function (img) {
+        items.push({
+          id: ++seq,
+          name: f.name || 'photo',
+          img: img,
+          url: img.__url,
+          sw: img.__w,
+          sh: img.__h,
+          out: null,
+          outUrl: '',
+          ow: 0,
+          oh: 0
+        });
+      }).catch(function () { bad++; });
+    });
+  });
+  chain.then(function () {
+    if (bad) {
+      $('err').textContent = bad + '장은 열지 못했어요(HEIC 등 지원하지 않는 형식일 수 있어요).';
+      $('err').classList.add('show');
+    }
+    if (!items.length) return;
+    $('optCard').style.display = 'block';
+    $('resultCard').style.display = 'block';
+    renderList();
+    processAll();
+  });
+}
+
+function loadImage(file) {
+  return new Promise(function (resolve, reject) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth || img.width;
+      var h = img.naturalHeight || img.height;
+      if (!w || !h) { URL.revokeObjectURL(url); reject(new Error('empty')); return; }
+      img.__url = url;
+      img.__w = w;
+      img.__h = h;
+      resolve(img);
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.src = url;
+  });
+}
+
+function renderList() {
+  var list = $('list');
+  list.innerHTML = '';
+  $('cnt').textContent = items.length + '장';
+
+  items.forEach(function (it) {
+    var d = document.createElement('div');
+    d.className = 'thumb';
+    d.setAttribute('data-id', it.id);
+    d.innerHTML =
+      '<div class="ph"><img alt="" src="' + (it.outUrl || it.url) + '"></div>' +
+      '<div class="cap">' +
+        '<div class="nm">' + escapeHtml(it.name) + '</div>' +
+        '<div class="sz">' + (it.out ? it.ow + '×' + it.oh : '변환 준비 중…') + '</div>' +
+        '<div class="ops">' +
+          '<button type="button" class="save">저장</button>' +
+          '<button type="button" class="del">✕</button>' +
+        '</div>' +
+      '</div>';
+    d.querySelector('.save').addEventListener('click', function () { saveOne(it); });
+    d.querySelector('.del').addEventListener('click', function () { removeItem(it.id); });
+    list.appendChild(d);
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function refreshTile(it) {
+  var d = $('list').querySelector('[data-id="' + it.id + '"]');
+  if (!d) return;
+  var img = d.querySelector('img');
+  if (it.outUrl && img.getAttribute('src') !== it.outUrl) img.setAttribute('src', it.outUrl);
+  d.querySelector('.sz').textContent = it.out ? it.ow + '×' + it.oh : '변환 준비 중…';
+}
+
+function schedule() {
+  clearTimeout(timer);
+  timer = setTimeout(processAll, 200);
+}
+
+function frameSize() {
+  var ratio = segVal('ratioSeg') || '1:1';
+  var r = RATIOS[ratio] || [1, 1];
+  var base = Number(segVal('resSeg')) || 1080;
+  var w, h;
+  if (r[0] >= r[1]) {
+    w = base;
+    h = Math.round(base * r[1] / r[0]);
+  } else {
+    h = base;
+    w = Math.round(base * r[0] / r[1]);
+  }
+  return { w: w, h: h };
+}
+
+function processAll() {
+  if (!items.length) return;
+  var fill = segVal('fillSeg') || 'white';
+  var scalePct = Number($('scale').value) / 100;
+  var mime = segVal('fmtSeg') || 'image/jpeg';
+  var color = $('bgColor').value;
+  var fr = frameSize();
+  var i = 0;
+  var chain = Promise.resolve();
+
+  items.forEach(function (it) {
+    chain = chain.then(function () {
+      return drawItem(it, fr.w, fr.h, fill, scalePct, mime, color).then(function (blob) {
+        if (it.outUrl) URL.revokeObjectURL(it.outUrl);
+        it.out = blob;
+        it.outUrl = URL.createObjectURL(blob);
+        it.ow = fr.w;
+        it.oh = fr.h;
+        i++;
+        refreshTile(it);
+        setProg((i / items.length) * 100);
+      }).catch(function () {});
+    });
+  });
+}
+
+function drawItem(it, W, H, fill, scalePct, mime, color) {
+  var c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  var ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+
+  var base = fill === 'black' ? '#000000' : fill === 'color' ? color : '#ffffff';
+
+  if (fill === 'blur') {
+    drawBlurBg(ctx, it.img, W, H);
+  } else {
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  /* 사진은 비율 유지한 채 프레임 안에 맞춤 (contain) */
+  var s = Math.min(W / it.sw, H / it.sh) * scalePct;
+  var dw = Math.max(1, Math.round(it.sw * s));
+  var dh = Math.max(1, Math.round(it.sh * s));
+  var x = Math.round((W - dw) / 2);
+  var y = Math.round((H - dh) / 2);
+
+  ctx.drawImage(it.img, x, y, dw, dh);
+
+  return new Promise(function (res, rej) {
+    c.toBlob(function (b) { b ? res(b) : rej(new Error('encode')); }, mime, 0.92);
+  });
+}
+
+/* ctx.filter 미지원 브라우저에서도 동작하는 저해상도 확대 블러 */
+function drawBlurBg(ctx, img, W, H) {
+  var small = document.createElement('canvas');
+  var sw = Math.max(8, Math.round(W / 24));
+  var sh = Math.max(8, Math.round(H / 24));
+  small.width = sw;
+  small.height = sh;
+  var sctx = small.getContext('2d');
+  sctx.imageSmoothingEnabled = true;
+  var s = Math.max(sw / img.__w, sh / img.__h) * 1.12;
+  var dw = img.__w * s;
+  var dh = img.__h * s;
+  sctx.drawImage(img, (sw - dw) / 2, (sh - dh) / 2, dw, dh);
+
+  var mid = document.createElement('canvas');
+  mid.width = Math.max(4, Math.round(sw / 2));
+  mid.height = Math.max(4, Math.round(sh / 2));
+  var mctx = mid.getContext('2d');
+  mctx.imageSmoothingEnabled = true;
+  mctx.drawImage(small, 0, 0, mid.width, mid.height);
+
+  ctx.save();
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(mid, 0, 0, W, H);
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+}
+
+function saveOne(it) {
+  if (!it.out) { toast('아직 변환 중이에요'); return; }
+  var ext = it.out.type === 'image/png' ? 'png' : 'jpg';
+  var ratio = (segVal('ratioSeg') || '1:1').replace(':', 'x');
+  saveBlob(it.out, baseName(it.name) + '-' + ratio + '.' + ext);
+}
+
+function saveAll() {
+  var done = items.filter(function (x) { return x.out; });
+  if (!done.length) { toast('저장할 사진이 없어요'); return; }
+  if (busy) return;
+  busy = true;
+  $('saveAll').disabled = true;
+  var ratio = (segVal('ratioSeg') || '1:1').replace(':', 'x');
+
+  if (window.JSZip) {
+    var zip = new JSZip();
+    var count = {};
+    done.forEach(function (it) {
+      var ext = it.out.type === 'image/png' ? 'png' : 'jpg';
+      var base = baseName(it.name) + '-' + ratio;
+      count[base] = (count[base] || 0) + 1;
+      zip.file(base + (count[base] > 1 ? '-' + count[base] : '') + '.' + ext, it.out);
+    });
+    setProg(45);
+    zip.generateAsync({ type: 'blob' }).then(function (blob) {
+      setProg(100);
+      saveBlob(blob, '비율변환-' + ratio + '-' + stamp() + '.zip');
+      toast(done.length + '장을 ZIP으로 저장했어요');
+    }).catch(function () {
+      toast('ZIP을 만들지 못했어요. 한 장씩 저장해 주세요.');
+    }).then(function () {
+      busy = false;
+      $('saveAll').disabled = false;
+    });
+  } else {
+    done.forEach(function (it, i) {
+      setTimeout(function () { saveOne(it); }, i * 700);
+    });
+    busy = false;
+    $('saveAll').disabled = false;
+  }
+}
+
+function removeItem(id) {
+  var i = -1;
+  for (var k = 0; k < items.length; k++) if (items[k].id === id) { i = k; break; }
+  if (i < 0) return;
+  if (items[i].outUrl) URL.revokeObjectURL(items[i].outUrl);
+  items.splice(i, 1);
+  renderList();
+  if (!items.length) {
+    $('optCard').style.display = 'none';
+    $('resultCard').style.display = 'none';
+  }
+}
+</script>
+</body>
+</html>
