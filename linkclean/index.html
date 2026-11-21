@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="링크 청소기">
+<title>링크 청소기</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --bg: #f4f5f8;
+    --card: #ffffff;
+    --ink: #16181d;
+    --muted: #6b7280;
+    --line: #e7e9ee;
+    --accent: #4f46e5;
+    --accent-ink: #ffffff;
+    --accent-soft: #eef1ff;
+    --ok: #0f9863;
+    --danger: #d94848;
+    --radius: 16px;
+  }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard",
+      "Malgun Gothic", "Noto Sans KR", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    padding: 0 0 env(safe-area-inset-bottom);
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 0 16px 48px; }
+
+  header {
+    background: linear-gradient(160deg, #5b52ec 0%, #7c6cf5 55%, #9d8cff 100%);
+    color: #fff;
+    padding: calc(22px + env(safe-area-inset-top)) 20px 26px;
+    border-radius: 0 0 26px 26px;
+    box-shadow: 0 8px 24px rgba(79, 70, 229, .22);
+  }
+  header .inner { max-width: 560px; margin: 0 auto; }
+  header h1 { font-size: 21px; margin: 0 0 4px; letter-spacing: -.4px; font-weight: 800; }
+  header p { margin: 0; font-size: 13.5px; opacity: .88; line-height: 1.45; }
+
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-top: 14px;
+    box-shadow: 0 1px 2px rgba(22, 24, 29, .04), 0 6px 18px rgba(22, 24, 29, .05);
+  }
+  .card h2 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    margin: 0 0 10px;
+    letter-spacing: .2px;
+  }
+
+  textarea#src {
+    width: 100%;
+    height: 92px;
+    resize: vertical;
+    border: 1px solid var(--line);
+    background: #fbfbfd;
+    border-radius: 12px;
+    padding: 12px;
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1.45;
+    color: var(--ink);
+    outline: none;
+  }
+  textarea#src:focus { border-color: #b9b4ff; background: #fff; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+  .row { display: flex; gap: 8px; margin-top: 10px; }
+  .row > * { flex: 1; }
+
+  button {
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    border: 0;
+    border-radius: 12px;
+    padding: 13px 14px;
+    cursor: pointer;
+    transition: transform .06s ease, background .15s ease;
+    touch-action: manipulation;
+  }
+  button:active { transform: scale(.985); }
+  .btn-ghost { background: #f1f2f6; color: var(--ink); }
+  .btn-ghost:active { background: #e8eaf0; }
+  .btn-primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 14px rgba(79, 70, 229, .28); }
+  .btn-primary.done { background: var(--ok); box-shadow: 0 4px 14px rgba(15, 152, 99, .26); }
+  .btn-small { font-size: 13px; padding: 9px 12px; border-radius: 10px; flex: none; }
+  .btn-danger { background: #fdeeee; color: var(--danger); }
+
+  .help {
+    display: none;
+    margin-top: 10px;
+    background: #fff8ea;
+    border: 1px solid #f5e3b8;
+    color: #7a5b12;
+    border-radius: 12px;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .help.show { display: block; }
+
+  .result { display: none; }
+  .result.show { display: block; }
+
+  .urlbox {
+    background: var(--accent-soft);
+    border: 1px solid #dfe2ff;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+  .urlbox .label { font-size: 11.5px; font-weight: 700; color: var(--accent); letter-spacing: .4px; margin-bottom: 6px; }
+  #out {
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.45;
+    word-break: break-all;
+    user-select: all;
+    -webkit-user-select: all;
+    color: #201f4d;
+  }
+  #out.empty { color: var(--muted); font-weight: 500; }
+
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; flex-wrap: wrap; }
+  .badge { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #f1f2f6; color: var(--muted); }
+  .badge.cut { background: #ffecec; color: #c33; }
+  .badge.clean { background: #e7f7ef; color: var(--ok); }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .chip {
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f4f5f8;
+    color: #55596a;
+    border: 1px solid var(--line);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    word-break: break-all;
+  }
+
+  .note {
+    font-size: 13px;
+    color: #7a5b12;
+    background: #fffaef;
+    border: 1px solid #f5e3b8;
+    border-radius: 10px;
+    padding: 9px 11px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+
+  .err {
+    display: none;
+    background: #fdeeee;
+    border: 1px solid #f6cfcf;
+    color: #a83232;
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .err.show { display: block; }
+
+  details { margin-top: 4px; }
+  summary {
+    list-style: none;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--muted);
+    padding: 8px 0;
+    cursor: pointer;
+  }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: " ▾"; }
+  details[open] summary::after { content: " ▴"; }
+  .orig {
+    font-size: 13px;
+    color: var(--muted);
+    word-break: break-all;
+    background: #fafbfc;
+    border: 1px dashed var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    line-height: 1.5;
+  }
+
+  .hist-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .hist-head h2 { margin: 0; }
+  #hist { list-style: none; margin: 0; padding: 0; }
+  #hist li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 0;
+    border-top: 1px solid var(--line);
+  }
+  #hist li:first-child { border-top: 0; }
+  #hist .h-main { flex: 1; min-width: 0; }
+  #hist .h-url {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #hist .h-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  #hist .h-copy {
+    flex: none;
+    background: var(--accent-soft);
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 10px;
+  }
+  .empty-hint { font-size: 13.5px; color: var(--muted); padding: 6px 0 2px; }
+
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: calc(24px + env(safe-area-inset-bottom));
+    transform: translate(-50%, 20px);
+    background: #16181d;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 12px 20px;
+    border-radius: 999px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease;
+    z-index: 50;
+    white-space: nowrap;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .22);
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  footer { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 18px; line-height: 1.6; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="inner">
+    <h1>🧹 링크 청소기</h1>
+    <p>인스타·스레드·쿠팡·유튜브 링크에서 추적 값만 잘라내고 깔끔한 원본 주소를 복사해요.</p>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="card">
+    <h2>링크 붙여넣기</h2>
+    <textarea id="src" placeholder="링크를 붙여넣으세요. 글에 섞여 있어도 괜찮아요." autocapitalize="off" autocorrect="off" spellcheck="false"></textarea>
+    <div class="row">
+      <button id="pasteBtn" class="btn-ghost" type="button">📋 붙여넣기</button>
+      <button id="clearBtn" class="btn-ghost" type="button">지우기</button>
+    </div>
+    <div class="help" id="pasteHelp">
+      사파리가 클립보드 읽기를 막았어요. 위 입력창을 <b>길게 눌러 [붙여넣기]</b>를 선택하면 바로 정리돼요.
+    </div>
+  </section>
+
+  <section class="card result" id="resultCard">
+    <div class="urlbox">
+      <div class="label">정리된 주소</div>
+      <div id="out">—</div>
+    </div>
+    <div class="meta" id="meta"></div>
+    <div class="chips" id="chips"></div>
+    <div class="note" id="note" style="display:none"></div>
+    <div class="row" style="margin-top:0">
+      <button id="copyBtn" class="btn-primary" type="button">복사</button>
+    </div>
+    <details id="origWrap">
+      <summary>원본 보기</summary>
+      <div class="orig" id="orig"></div>
+    </details>
+  </section>
+
+  <div class="err" id="err"></div>
+
+  <section class="card">
+    <div class="hist-head">
+      <h2>최근 정리한 링크</h2>
+      <button id="clearHist" class="btn-danger btn-small" type="button">전체 삭제</button>
+    </div>
+    <ul id="hist"></ul>
+    <div class="empty-hint" id="histEmpty">복사한 링크가 여기 쌓여요. 최근 20개까지 저장돼요.</div>
+  </section>
+
+  <footer>
+    t.co·bit.ly 같은 줄임 링크는 원래 주소를 알 수 없어 그대로 둬요.
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* 링크 청소기 — 추적 파라미터 제거 코어
+   URL 클래스 없이 문자열만으로 파싱해 어디서든(브라우저/테스트 엔진) 같은 결과가 나온다. */
+
+var GENERAL_EXACT = [
+  'fbclid', 'gclid', 'gbraid', 'wbraid', 'dclid', 'msclkid', 'yclid', 'twclid',
+  'ttclid', 'igshid', 'igsh', 'si', 'mc_cid', 'mc_eid', '_hsenc', '_hsmi',
+  'mkt_tok', 'trk', 'trkcampaign', 'ref_src', 'ref_url', 's_kwcid', 'spm', 'scm',
+  '__twitter_impression', 'share_id', 'shareid', 'wt.mc_id', 'vero_id', 'cmpid',
+  'ncid', 'smid', 'icid', 'at_medium', 'at_campaign', 'xtor', '_ga', '_gl',
+  'pk_campaign', 'pk_kwd', 'oly_enc_id', 'oly_anon_id', 'rb_clickid', 's_cid',
+  'elqtrackid', 'elqtrack'
+];
+
+var GENERAL_PREFIX = ['utm_', 'mtm_', 'hsa_'];
+
+/* cid, ref, source, id, q, query 는 사이트에 따라 기능 파라미터라 일반 규칙에서 제외 */
+var GENERAL_KEEP = ['cid', 'ref', 'source', 'id', 'q', 'query'];
+
+var SHORT_HOSTS = ['t.co', 'bit.ly', 'link.coupang.com', 'han.gl', 'buly.kr',
+  'url.kr', 'vo.la', 'me2.do', 'naver.me', 'vm.tiktok.com', 'amzn.to', 'dlvr.it'];
+
+var TRAIL = '.,;:!?、。·…\'"”’)]}〉》」』】>';
+
+function tryDecode(s) {
+  try { return decodeURIComponent(String(s).replace(/\+/g, ' ')); } catch (e) { return String(s); }
+}
+
+/* 붙여넣은 글에서 첫 URL만 뽑아낸다 */
+function extractUrl(text) {
+  if (!text) return null;
+  var m = String(text).match(/(https?:\/\/[^\s<>"'`]+|www\.[^\s<>"'`]+)/i);
+  if (!m) return null;
+  var u = m[1];
+  while (u.length && TRAIL.indexOf(u.charAt(u.length - 1)) !== -1) u = u.slice(0, -1);
+  if (/^www\./i.test(u)) u = 'https://' + u;
+  return u;
+}
+
+/* [protocol, host(포트 포함), path, query(물음표 제외), hash(# 포함)] */
+function splitUrl(u) {
+  var m = String(u).match(/^(https?):\/\/([^\/?#]+)([^?#]*)(?:\?([^#]*))?(#.*)?$/i);
+  if (!m) return null;
+  var hostport = m[2];
+  var at = hostport.lastIndexOf('@');
+  if (at !== -1) hostport = hostport.slice(at + 1);
+  if (!hostport) return null;
+  var hostname = hostport.replace(/:\d+$/, '');
+  if (hostname.indexOf('.') === -1 && !/^\[/.test(hostname)) return null;
+  if (!/^[a-z0-9.\-[\]:]+$/i.test(hostport)) return null;
+  return {
+    protocol: m[1].toLowerCase(),
+    hostport: hostport,
+    hostname: hostname.toLowerCase(),
+    path: m[3] || '',
+    query: m[4] == null ? '' : m[4],
+    hash: m[5] || ''
+  };
+}
+
+function parseQuery(q) {
+  var out = [];
+  if (!q) return out;
+  var parts = q.split('&');
+  for (var i = 0; i < parts.length; i++) {
+    var part = parts[i];
+    if (!part) continue;
+    var eq = part.indexOf('=');
+    var name = eq === -1 ? part : part.slice(0, eq);
+    var value = eq === -1 ? '' : part.slice(eq + 1);
+    out.push({ raw: part, name: name, key: tryDecode(name).toLowerCase(), value: value });
+  }
+  return out;
+}
+
+function build(u, pairs) {
+  var q = pairs.map(function (p) { return p.raw; }).join('&');
+  return u.protocol + '://' + u.hostport + u.path + (q ? '?' + q : '') + u.hash;
+}
+
+function isGeneralTracker(key) {
+  if (GENERAL_KEEP.indexOf(key) !== -1) return false;
+  if (GENERAL_EXACT.indexOf(key) !== -1) return true;
+  for (var k = 0; k < GENERAL_PREFIX.length; k++) if (key.indexOf(GENERAL_PREFIX[k]) === 0) return true;
+  return false;
+}
+
+function endsWithHost(host, suffix) {
+  return host === suffix || host.slice(-(suffix.length + 1)) === '.' + suffix;
+}
+
+/* 도메인별 규칙: keepOnly(허용 목록만 남김) / removeExtra / normalizeProduct / redirect */
+function domainRules(u, pairs, notes) {
+  var host = u.hostname;
+  var state = { keepOnly: null, removeExtra: [], normalizeProduct: null };
+
+  if (host === 'l.instagram.com' || host === 'l.facebook.com') {
+    for (var i = 0; i < pairs.length; i++) {
+      if (pairs[i].key === 'u') {
+        notes.push('줄임 링크에 숨은 원래 주소를 꺼냈어요');
+        return { redirect: tryDecode(pairs[i].value) };
+      }
+    }
+  }
+
+  if (endsWithHost(host, 'instagram.com')) {
+    state.removeExtra = ['igsh', 'igshid', 'share_id', 'utm_'];
+  } else if (endsWithHost(host, 'threads.com') || endsWithHost(host, 'threads.net')) {
+    state.removeExtra = ['xmt', 'slof', 'igsh', 'igshid'];
+  } else if (endsWithHost(host, 'youtube.com') || host === 'youtu.be') {
+    state.removeExtra = ['si', 'feature', 'pp', 'ab_channel'];
+    var p = u.path;
+    if (host === 'youtu.be' || p === '/watch' || p.indexOf('/shorts/') === 0 ||
+        p.indexOf('/live/') === 0 || p === '/embed' || p.indexOf('/embed/') === 0) {
+      state.keepOnly = ['v', 'list', 'index', 't', 'start', 'time_continue'];
+    }
+  } else if (endsWithHost(host, 'coupang.com')) {
+    var prod = u.path.match(/^\/vp\/products\/(\d+)/);
+    if (prod) {
+      state.normalizeProduct = prod[1];
+      state.keepOnly = ['itemId', 'vendorItemId', 'productId'];
+    } else if (/^\/np\/search/.test(u.path)) {
+      /* q 는 검색 링크의 본체라 살린다 */
+      state.keepOnly = ['q', 'channel'];
+    } else {
+      state.removeExtra = ['q', 'searchid', 'sourcetype', 'rank', 'ctag', 'nm', 'spm', 'src',
+        'spec', 'clickeventname', 'requestid', 'listid', 'itemids', 'pagetype',
+        'firstcategoryid', 'isaddedcart'];
+    }
+  } else if (endsWithHost(host, 'x.com') || endsWithHost(host, 'twitter.com')) {
+    state.removeExtra = ['s', 't'];
+  } else if (endsWithHost(host, 'naver.com')) {
+    state.removeExtra = ['referrercode', 'trackingcode', 'ishttps'];
+    if (!(host === 'search.naver.com' || /^\/search\.naver/.test(u.path))) state.removeExtra.push('from');
+  } else if (endsWithHost(host, 'tiktok.com')) {
+    state.removeExtra = ['is_from_webapp', 'sender_device', 'web_id', 'share_app_id', '_r', '_t', 'checksum'];
+  }
+  return state;
+}
+
+function matchesExtra(key, extra) {
+  for (var i = 0; i < extra.length; i++) {
+    var e = extra[i].toLowerCase();
+    if (e.slice(-1) === '_' ? key.indexOf(e) === 0 : e === key) return true;
+  }
+  return false;
+}
+
+function cleanLink(input) {
+  var res = {
+    ok: false,
+    input: String(input == null ? '' : input),
+    url: '',
+    removed: [],
+    notes: [],
+    error: ''
+  };
+  var found = extractUrl(res.input);
+  if (!found) { res.error = '주소를 찾지 못했어요. http:// 또는 https:// 로 시작하는 링크를 넣어 주세요.'; return res; }
+
+  var s = splitUrl(found);
+  if (!s) { res.error = '주소 형태가 올바르지 않아요. 복사한 링크를 그대로 다시 넣어 주세요.'; return res; }
+
+  var host = s.hostname.replace(/^www\./, '');
+  if (SHORT_HOSTS.indexOf(host) !== -1) {
+    res.ok = true;
+    res.url = found;
+    res.notes.push('줄임 링크예요. 안에 숨은 추적 값은 확인할 수 없어 주소를 그대로 뒀어요.');
+    return res;
+  }
+
+  var pairs = parseQuery(s.query);
+  var rules = domainRules(s, pairs, res.notes);
+
+  if (rules.redirect) {
+    var inner = cleanLink(rules.redirect);
+    if (inner.ok) {
+      inner.notes = res.notes.concat(inner.notes);
+      return inner;
+    }
+  }
+
+  var keep = [];
+  for (var i = 0; i < pairs.length; i++) {
+    var p = pairs[i];
+    var drop = false;
+    if (rules.keepOnly) {
+      drop = rules.keepOnly.map(function (x) { return x.toLowerCase(); }).indexOf(p.key) === -1;
+    } else {
+      drop = isGeneralTracker(p.key) || matchesExtra(p.key, rules.removeExtra);
+    }
+    if (drop) res.removed.push({ name: p.key, value: p.value });
+    else keep.push(p);
+  }
+
+  if (rules.normalizeProduct) {
+    var wanted = ['itemid', 'vendoritemid', 'productid'];
+    keep = keep.filter(function (x) { return wanted.indexOf(x.key) !== -1; });
+  }
+
+  res.url = build(s, keep);
+  res.ok = true;
+  return res;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { cleanLink: cleanLink, extractUrl: extractUrl };
+}
+
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var src = $('src'), out = $('out'), meta = $('meta'), chips = $('chips'), note = $('note');
+  var resultCard = $('resultCard'), err = $('err'), orig = $('orig'), origWrap = $('origWrap');
+  var copyBtn = $('copyBtn'), toastEl = $('toast'), histEl = $('hist'), histEmpty = $('histEmpty');
+  var KEY = 'linkclean.history.v1';
+  var current = null;
+  var toastTimer = null;
+
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { toastEl.classList.remove('show'); }, 1600);
+  }
+
+  /* ---------- 기록 ---------- */
+  function loadHistory() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      var arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) { return []; }
+  }
+  function saveHistory(arr) {
+    try { localStorage.setItem(KEY, JSON.stringify(arr.slice(0, 20))); } catch (e) {}
+  }
+  function timeLabel(ts) {
+    var d = new Date(ts), now = new Date();
+    var hm = ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2);
+    if (d.toDateString() === now.toDateString()) return '오늘 ' + hm;
+    return (d.getMonth() + 1) + '월 ' + d.getDate() + '일 ' + hm;
+  }
+  function pushHistory(entry) {
+    var arr = loadHistory().filter(function (x) { return x.url !== entry.url; });
+    arr.unshift(entry);
+    saveHistory(arr);
+    renderHistory();
+  }
+  function renderHistory() {
+    var arr = loadHistory();
+    histEl.innerHTML = '';
+    histEmpty.style.display = arr.length ? 'none' : 'block';
+    arr.forEach(function (item) {
+      var li = document.createElement('li');
+      var main = document.createElement('div');
+      main.className = 'h-main';
+      var u = document.createElement('div');
+      u.className = 'h-url';
+      u.textContent = item.url.replace(/^https?:\/\//, '');
+      var sub = document.createElement('div');
+      sub.className = 'h-sub';
+      sub.textContent = timeLabel(item.at) + (item.cut ? ' · 추적 값 ' + item.cut + '개 제거' : '');
+      main.appendChild(u); main.appendChild(sub);
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'h-copy';
+      b.textContent = '복사';
+      b.addEventListener('click', function () { doCopy(item.url); });
+      li.appendChild(main); li.appendChild(b);
+      li.addEventListener('click', function (e) {
+        if (e.target === b) return;
+        src.value = item.url; runClean(true);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      histEl.appendChild(li);
+    });
+  }
+
+  /* ---------- 복사 ---------- */
+  function doCopy(text) {
+    var done = function (ok) {
+      if (ok) {
+        toast('복사했어요');
+        if (copyBtn) { copyBtn.textContent = '복사됨 ✓'; copyBtn.classList.add('done');
+          setTimeout(function () { copyBtn.textContent = '복사'; copyBtn.classList.remove('done'); }, 1400); }
+      } else {
+        toast('복사가 막혔어요. 주소를 길게 눌러 복사해 주세요.');
+      }
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(fallbackCopy(text)); });
+    } else {
+      done(fallbackCopy(text));
+    }
+  }
+  function fallbackCopy(text) {
+    var ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'fixed';
+    ta.style.top = '-1000px';
+    document.body.appendChild(ta);
+    ta.select();
+    ta.setSelectionRange(0, text.length);
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  /* ---------- 정리 ---------- */
+  function runClean(silent) {
+    var text = src.value;
+    current = null;
+    if (!text || !text.trim()) {
+      resultCard.classList.remove('show');
+      err.classList.remove('show');
+      return;
+    }
+    var r = cleanLink(text);
+    if (!r.ok) {
+      resultCard.classList.remove('show');
+      err.textContent = r.error;
+      err.classList.add('show');
+      return;
+    }
+    err.classList.remove('show');
+    current = r;
+
+    out.textContent = r.url;
+    out.classList.remove('empty');
+    meta.innerHTML = '';
+    var cut = r.removed.length;
+    var b1 = document.createElement('span');
+    b1.className = 'badge ' + (cut ? 'cut' : 'clean');
+    b1.textContent = cut ? '추적 값 ' + cut + '개 제거' : '추적 값 없음';
+    meta.appendChild(b1);
+
+    var b2 = document.createElement('span');
+    b2.className = 'badge';
+    b2.textContent = r.url.length + '자';
+    meta.appendChild(b2);
+
+    chips.innerHTML = '';
+    r.removed.forEach(function (x) {
+      var s = document.createElement('span');
+      s.className = 'chip';
+      s.textContent = x.name;
+      if (x.value) s.title = x.name + '=' + x.value;
+      chips.appendChild(s);
+    });
+
+    if (r.notes.length) {
+      note.textContent = r.notes.join(' ');
+      note.style.display = 'block';
+    } else {
+      note.style.display = 'none';
+    }
+
+    orig.textContent = r.input.trim();
+    origWrap.open = false;
+    resultCard.classList.add('show');
+    if (!silent) {
+      try { resultCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } catch (e) {}
+    }
+  }
+
+  var typing = null;
+  src.addEventListener('input', function () {
+    clearTimeout(typing);
+    typing = setTimeout(function () { runClean(true); }, 160);
+  });
+  src.addEventListener('paste', function () { setTimeout(function () { runClean(true); }, 0); });
+
+  $('pasteBtn').addEventListener('click', function () {
+    var help = $('pasteHelp');
+    if (!(navigator.clipboard && navigator.clipboard.readText)) {
+      help.classList.add('show'); src.focus(); return;
+    }
+    navigator.clipboard.readText().then(function (t) {
+      if (!t || !t.trim()) { toast('클립보드가 비어 있어요'); return; }
+      src.value = t;
+      help.classList.remove('show');
+      runClean(false);
+    }, function () {
+      help.classList.add('show');
+      src.focus();
+    });
+  });
+
+  $('clearBtn').addEventListener('click', function () {
+    src.value = '';
+    resultCard.classList.remove('show');
+    err.classList.remove('show');
+    $('pasteHelp').classList.remove('show');
+    src.focus();
+  });
+
+  copyBtn.addEventListener('click', function () {
+    if (!current) return;
+    doCopy(current.url);
+    pushHistory({ url: current.url, at: Date.now(), cut: current.removed.length });
+  });
+
+  $('clearHist').addEventListener('click', function () {
+    if (!loadHistory().length) { toast('기록이 없어요'); return; }
+    if (confirm('최근 기록을 모두 지울까요?')) {
+      saveHistory([]);
+      renderHistory();
+      toast('기록을 지웠어요');
+    }
+  });
+
+  renderHistory();
+})();
+</script>
+</body>
+</html>
