@@ -8,15 +8,6 @@
 <meta name="apple-mobile-web-app-title" content="비율 리사이즈">
 <title>비율 리사이즈 (스레드·인스타)</title>
 <style>
-  :root {
-    --accent: #c92a76;
-    --accent-ink: #ffffff;
-    --accent-soft: #fdeef6;
-    --accent-line: #f8cfe4;
-    --accent-shadow: rgba(201, 42, 118, .24);
-    --hdr: linear-gradient(160deg, #c92a76 0%, #dc4d8f 55%, #f184b6 100%);
-    --hdr-shadow: rgba(201, 42, 118, .22);
-  }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   :root {
     --bg: #f4f5f8;
@@ -234,6 +225,17 @@
   footer { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 20px; line-height: 1.7; }
   footer a { color: #6b7280; text-decoration: none; border-bottom: 1px solid #dcdfe6; }
   .fox { font-size: 12px; color: #9aa0ab; text-align: center; margin-top: 22px; }
+
+  :root {
+    --accent: #c92a76;
+    --accent-ink: #ffffff;
+    --accent-soft: #fdeef6;
+    --accent-line: #f8cfe4;
+    --accent-shadow: rgba(201, 42, 118, .24);
+    --hdr: linear-gradient(160deg, #c92a76 0%, #dc4d8f 55%, #f184b6 100%);
+    --hdr-shadow: rgba(201, 42, 118, .22);
+  }
+
   input[type=range] { width: 100%; -webkit-appearance: none; appearance: none; height: 30px; background: transparent; margin: 0; }
   input[type=range]::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: #e3e5ee; }
   input[type=range]::-webkit-slider-thumb {
@@ -586,15 +588,7 @@ function frameSize() {
   var ratio = segVal('ratioSeg') || '1:1';
   var r = RATIOS[ratio] || [1, 1];
   var base = Number(segVal('resSeg')) || 1080;
-  var w, h;
-  if (r[0] >= r[1]) {
-    w = base;
-    h = Math.round(base * r[1] / r[0]);
-  } else {
-    h = base;
-    w = Math.round(base * r[0] / r[1]);
-  }
-  return { w: w, h: h };
+  return { w: base, h: Math.round(base * r[1] / r[0]) };
 }
 
 function processAll() {
