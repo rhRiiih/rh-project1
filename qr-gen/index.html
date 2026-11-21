@@ -638,7 +638,8 @@ function downloadPng() {
   var n = QR.count;
   var quiet = 4;
   var px = Math.max(1, Math.round(target / (n + quiet * 2)));
-  var side = (n + quiet * 2) * px;
+  var side = target;
+  var offset = Math.round((side - n * px) / 2);
   var c = document.createElement('canvas');
   c.width = side;
   c.height = side;
@@ -648,7 +649,7 @@ function downloadPng() {
   ctx.fillStyle = $('fg').value;
   for (var r = 0; r < n; r++) {
     for (var col = 0; col < n; col++) {
-      if (QR.matrix[r][col]) ctx.fillRect((col + quiet) * px, (r + quiet) * px, px, px);
+      if (QR.matrix[r][col]) ctx.fillRect(offset + col * px, offset + r * px, px, px);
     }
   }
   c.toBlob(function (blob) {
