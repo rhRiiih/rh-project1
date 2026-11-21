@@ -372,14 +372,77 @@
 
 <div class="toast" id="toast"></div>
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', init);
 
-var PDF_WORKER = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 var MAX_SIDE = 4096;
+
+/* 라이브러리는 필요할 때 직접 받아 온다.
+   (htmlpreview 같은 미리보기 환경에서는 defer 스크립트가 실행되지 않는다) */
+var LIBS = {
+  pdfjs: [
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js'
+  ],
+  pdflib: [
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js',
+    'https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js',
+    'https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js'
+  ],
+  jszip: [
+    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+  ]
+};
+var libCache = {};
+
+function loadOne(url) {
+  return new Promise(function (res, rej) {
+    var s = document.createElement('script');
+    s.src = url;
+    s.async = true;
+    s.onload = function () { res(url); };
+    s.onerror = function () { s.remove(); rej(new Error(url)); };
+    document.head.appendChild(s);
+  });
+}
+
+function loadLib(name, check) {
+  if (libCache[name]) return libCache[name];
+  var list = LIBS[name];
+  var p = new Promise(function (resolve, reject) {
+    var i = 0;
+    function next() {
+      if (i >= list.length) { reject(new Error(name)); return; }
+      var url = list[i++];
+      loadOne(url).then(function (u) {
+        if (check()) resolve(u); else next();
+      }, next);
+    }
+    next();
+  });
+  libCache[name] = p;
+  p.catch(function () { libCache[name] = null; });
+  return p;
+}
+
+function ensurePdfJs() {
+  return loadLib('pdfjs', function () { return !!window.pdfjsLib; }).then(function (used) {
+    if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = used.replace(/pdf\.min\.js$/, 'pdf.worker.min.js');
+    }
+    return pdfjsLib;
+  });
+}
+function ensurePdfLib() {
+  return loadLib('pdflib', function () { return !!window.PDFLib; });
+}
+function ensureJsZip() {
+  return loadLib('jszip', function () { return !!window.JSZip; }).then(function () { return window.JSZip; });
+}
+
 
 function $(id) { return document.getElementById(id); }
 
@@ -449,14 +512,13 @@ function init() {
   $('tabP2I').addEventListener('click', function () { switchTab('p2i'); });
   $('tabI2P').addEventListener('click', function () { switchTab('i2p'); });
 
-  if (window.pdfjsLib) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = PDF_WORKER;
-    initPdfToImage();
-  } else {
-    $('pdfErr').textContent = 'PDF 엔진을 불러오지 못했어요. 인터넷 연결을 확인하고 화면을 새로 고쳐 주세요.';
-    $('pdfErr').classList.add('show');
-  }
+  initPdfToImage();
   initImageToPdf();
+
+  /* 미리 받아 두면 처음 파일을 골랐을 때 바로 처리된다. 실패해도 화면은 그대로. */
+  ensurePdfJs().catch(function () {});
+  ensurePdfLib().catch(function () {});
+  ensureJsZip().catch(function () {});
 }
 
 function switchTab(which) {
@@ -507,10 +569,14 @@ function openPdf(file) {
   $('pageOptions').style.display = 'block';
   $('pdfChip').style.display = 'flex';
   $('pdfName').textContent = file.name;
-  $('pdfMeta').textContent = fmtSize(file.size) + ' · 읽는 중…';
-  setProg($('pdfProg'), 12);
+  $('pdfMeta').textContent = fmtSize(file.size) + ' · 준비 중…';
+  setProg($('pdfProg'), 8);
 
-  file.arrayBuffer().then(function (buf) {
+  ensurePdfJs().then(function () {
+    setProg($('pdfProg'), 18);
+    $('pdfMeta').textContent = fmtSize(file.size) + ' · 읽는 중…';
+    return file.arrayBuffer();
+  }).then(function (buf) {
     return pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise;
   }).then(function (doc) {
     pdfState.doc = doc;
@@ -528,6 +594,8 @@ function openPdf(file) {
       err.textContent = '비밀번호가 걸린 PDF예요. 암호를 푼 파일로 다시 시도해 주세요.';
     } else if (msg === 'InvalidPDFException') {
       err.textContent = 'PDF 파일을 읽지 못했어요. 파일이 손상되지 않았는지 확인해 주세요.';
+    } else if (!window.pdfjsLib) {
+      err.textContent = 'PDF 엔진을 내려받지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.';
     } else {
       err.textContent = 'PDF를 여는 중 문제가 생겼어요. 화면을 새로 고친 뒤 다시 시도해 주세요.';
     }
@@ -622,33 +690,40 @@ function saveAll(useZip) {
   var fmt = segVal('fmtSeg');
   var mult = Number(segVal('scaleSeg'));
   var mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
-  var zip = useZip && window.JSZip ? new JSZip() : null;
-  if (useZip && !zip) toast('압축 도구를 못 불러와 개별 저장으로 진행해요');
-
   pdfState.busy = true;
-  var idx = 0;
-  var seq = Promise.resolve();
 
-  pages.forEach(function (p) {
-    seq = seq.then(function () {
-      return renderPage(pdfState.doc, p.n, mult, fmt).then(function (canvas) {
-        return new Promise(function (res) { canvas.toBlob(res, mime, 0.92); });
-      }).then(function (blob) {
-        var name = baseName(pdfState.name) + '-p' + p.n + '.' + fmt;
-        if (zip) zip.file(name, blob);
-        else saveBlob(blob, name);
-        idx++;
-        setProg($('saveProg'), (idx / pages.length) * 100);
+  var prep = useZip
+    ? ensureJsZip().then(function () { return new JSZip(); }, function () {
+        toast('압축 도구를 못 불러와 개별 저장으로 진행해요');
+        return null;
+      })
+    : Promise.resolve(null);
+
+  prep.then(function (zip) {
+    var idx = 0;
+    var seq = Promise.resolve();
+
+    pages.forEach(function (p) {
+      seq = seq.then(function () {
+        return renderPage(pdfState.doc, p.n, mult, fmt).then(function (canvas) {
+          return new Promise(function (res) { canvas.toBlob(res, mime, 0.92); });
+        }).then(function (blob) {
+          var name = baseName(pdfState.name) + '-p' + p.n + '.' + fmt;
+          if (zip) zip.file(name, blob);
+          else saveBlob(blob, name);
+          idx++;
+          setProg($('saveProg'), (idx / pages.length) * 100);
+        });
       });
     });
-  });
 
-  seq.then(function () {
-    if (zip) {
-      return zip.generateAsync({ type: 'blob' }).then(function (blob) {
-        saveBlob(blob, baseName(pdfState.name) + '-이미지-' + stamp() + '.zip');
-      });
-    }
+    return seq.then(function () {
+      if (zip) {
+        return zip.generateAsync({ type: 'blob' }).then(function (blob) {
+          saveBlob(blob, baseName(pdfState.name) + '-이미지-' + stamp() + '.zip');
+        });
+      }
+    });
   }).then(function () {
     toast(pages.length + '쪽 저장을 시작했어요');
   }).catch(function () {
@@ -802,17 +877,24 @@ function imageToJpegBlob(img) {
 
 function makePdf() {
   if (!imgState.length) return;
-  if (!window.PDFLib) {
+  var btn = $('makePdf');
+  if (btn.disabled) return;
+  btn.disabled = true;
+  $('imgErr').classList.remove('show');
+
+  ensurePdfLib().then(buildPdf).catch(function () {
     var err = $('imgErr');
-    err.textContent = 'PDF 만드는 도구를 불러오지 못했어요. 인터넷 연결을 확인하고 화면을 새로 고쳐 주세요.';
+    err.textContent = 'PDF 만드는 도구를 내려받지 못했어요. 인터넷 연결을 확인하고 다시 시도해 주세요.';
     err.classList.add('show');
-    return;
-  }
+    btn.disabled = false;
+  });
+}
+
+function buildPdf() {
   var mode = segVal('paperSeg');
   var margin = Number(segVal('marginSeg')) * 2.83465;
   var A4 = [595.28, 841.89];
   var btn = $('makePdf');
-  btn.disabled = true;
   $('imgErr').classList.remove('show');
 
   var PDFDocument = PDFLib.PDFDocument;

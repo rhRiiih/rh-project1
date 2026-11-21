@@ -341,9 +341,35 @@
 
 <div class="toast" id="toast"></div>
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script>
 window.addEventListener('DOMContentLoaded', init);
+
+/* ZIP 도구는 전체 저장을 누를 때 직접 받아 온다. */
+var JSZIP_URLS = [
+  'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+  'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'
+];
+var jszipPromise = null;
+
+function ensureJsZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (jszipPromise) return jszipPromise;
+  jszipPromise = new Promise(function (resolve, reject) {
+    var i = 0;
+    function next() {
+      if (i >= JSZIP_URLS.length) { jszipPromise = null; reject(new Error('jszip')); return; }
+      var s = document.createElement('script');
+      s.src = JSZIP_URLS[i++];
+      s.async = true;
+      s.onload = function () { window.JSZip ? resolve(window.JSZip) : next(); };
+      s.onerror = function () { s.remove(); next(); };
+      document.head.appendChild(s);
+    }
+    next();
+  });
+  return jszipPromise;
+}
 
 var items = [];
 var seq = 0;
@@ -698,7 +724,7 @@ function saveAll() {
   busy = true;
   $('saveAll').disabled = true;
 
-  if (window.JSZip) {
+  ensureJsZip().then(function () {
     var zip = new JSZip();
     var count = {};
     done.forEach(function (it) {
@@ -708,24 +734,21 @@ function saveAll() {
       var n = base + (count[base] > 1 ? '-' + count[base] : '') + '.' + ext;
       zip.file(n, it.out);
     });
-    setProg(50);
-    zip.generateAsync({ type: 'blob' }).then(function (blob) {
+    setProg(45);
+    return zip.generateAsync({ type: 'blob' }).then(function (blob) {
       setProg(100);
       saveBlob(blob, '압축사진-' + stamp() + '.zip');
       toast(done.length + '장을 ZIP으로 저장했어요');
-    }).catch(function () {
-      toast('ZIP을 만들지 못했어요. 한 장씩 저장해 주세요.');
-    }).then(function () {
-      busy = false;
-      $('saveAll').disabled = false;
     });
-  } else {
+  }).catch(function () {
     done.forEach(function (it, i) {
       setTimeout(function () { saveOne(it); }, i * 700);
     });
+    toast('압축 도구 대신 한 장씩 저장해요');
+  }).then(function () {
     busy = false;
     $('saveAll').disabled = false;
-  }
+  });
 }
 
 function removeItem(id) {
